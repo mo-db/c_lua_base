@@ -4,6 +4,9 @@
 Vec2 add_Vec2(const Vec2 v0, const Vec2 v1) {
 	return (Vec2){v0.x + v1.x, v0.y + v1.y};
 }
+Vec2 sub_Vec2(const Vec2 v0, const Vec2 v1) {
+	return (Vec2){v0.x - v1.x, v0.y - v1.y};
+}
 Vec2 mul_Vec2(const Vec2 v, const float s) {
 	return (Vec2){v.x * s, v.y * s};
 }
@@ -12,6 +15,9 @@ Vec2 div_Vec2(const Vec2 v, const float s) {
 }
 IVec2 add_IVec2(const IVec2 v0, const IVec2 v1) {
 	return (IVec2){v0.x + v1.x, v0.y + v1.y};
+}
+IVec2 sub_IVec2(const IVec2 v0, const IVec2 v1) {
+	return (IVec2){v0.x - v1.x, v0.y - v1.y};
 }
 IVec2 mul_IVec2(const IVec2 v, int s) {
 	return (IVec2){v.x * s, v.y * s};
