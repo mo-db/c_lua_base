@@ -30,8 +30,8 @@ IVec2 get_IVec2(const Vec2 v) {
 Vec2 get_Vec2(const IVec2 v) {
 	return (Vec2){(float)(v.x), (float)(v.y)};
 }
-void norm_Vec2(Vec2 v) { 
-	float mag = get_mag_Vec2(v); v.x /= mag; v.y /= mag;
+void norm_Vec2(Vec2* v) { 
+	float mag = get_mag_Vec2(*v); v->x /= mag; v->y /= mag;
 }
 Vec2 get_norm_Vec2(const Vec2 v_in) { 
 	Vec2 v = v_in;

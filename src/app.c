@@ -91,4 +91,17 @@ void query_input(State* state) {
 	set_state(&state->input.down, key_states[SDL_SCANCODE_DOWN]);
 }
 
-
+void update_viewport(State* state, Viewport* viewport) {
+	if (get_state(state->input.left)) {
+		viewport->xy_offset.x += (4 / viewport->scale);
+	}
+	else if (get_state(state->input.right)) {
+		viewport->xy_offset.x -= (4 / viewport->scale);
+	}
+	else if (became_true(state->input.up)) {
+		viewport->scale *= 0.75;
+	}
+	else if (became_true(state->input.down)) {
+		viewport->scale *= 1.25;
+	}
+}

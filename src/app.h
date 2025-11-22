@@ -70,4 +70,4 @@ void process_events(State* state);
 void query_input(State* state);
 
 // update the render viewport using input
-// void update_viewport(State* state, render::Viewport* viewport);
+void update_viewport(State* state, Viewport* viewport);

@@ -273,177 +273,122 @@ int compare_angles(const void* in_0, const void* in_1){
 	}
 }
 
-void draw_trigon(Renderer *r, Vec2 p0, Vec2 p1, Vec2 p2, uint32_t color) {
-	Trigon trigon = new_Trigon(p0, p1, p2);
-	// p0 = world_to_screen(&r->viewport, p0);
-	// p1 = world_to_screen(&r->viewport, p1);
-	// p2 = world_to_screen(&r->viewport, p2);
+int clamp_trigon(float x_min, float x_max, float y_min, float y_max,
+		Trigon trigon, IVec2* new_vertices) {
+	Vec2 a = trigon.a;
+	Vec2 b = trigon.b;
+	Vec2 c = trigon.c;
 
-	trigon.a = world_to_screen(&r->viewport, p0);
-	trigon.b = world_to_screen(&r->viewport, p1);
-	trigon.c = world_to_screen(&r->viewport, p2);
-
-	// for (int i = 0; i < TRIGON_VERT_COUNT; i++) {
-	// 	trigon.v[i] = world_to_screen(&r->viewport, p0);
-	// }
-
-	printf("p0: %f, %f\n", p0.x, p0.y);
-	printf("p1: %f, %f\n", p1.x, p1.y);
-	printf("p2: %f, %f\n", p2.x, p2.y);
-
-	// define screen borders
-	float x_min = 200.0f;
-	float x_max = (float)r->pixelbuffer.width - 200.0f;
-	float y_min = 200.0f;
-	float y_max = (float)r->pixelbuffer.height - 200.0f;
 	Vec2 rect_start = {x_min, y_min};
 	Vec2 rect_end = {x_max, y_max};
 
-	// all relevant points to build trigons
-	Vec2 fpoints[16];
-	int fpoint_count = 0;
+	int new_vertex_count = 0;
 
-	// calculate ixn_points with screen borders
-	// Vec2 ixn_points0[2];
-	// Vec2 ixn_points1[2];
-	// Vec2 ixn_points2[2];
-	// int ixn_points0_count =
-	// 		rect_line_intersect(rect_start, rect_end, p0, p1, ixn_points0);
-	// int ixn_points1_count =
-	// 		rect_line_intersect(rect_start, rect_end, p0, p2, ixn_points1);
-	// int ixn_points2_count =
-	// 		rect_line_intersect(rect_start, rect_end, p1, p2, ixn_points2);
-	//
-	//  // add ixn_points to fpoints
-	// for (size_t i = 0; i < ixn_points0_count; i++) {
-	// 	fpoints[fpoint_count++] = ixn_points0[i];
-	// }
-	// for (size_t i = 0; i < ixn_points1_count; i++) {
-	// 	fpoints[fpoint_count++] = ixn_points1[i];
-	// }
-	// for (size_t i = 0; i < ixn_points2_count; i++) {
-	// 	fpoints[fpoint_count++] = ixn_points2[i];
-	// }
-
-
+	// calculate ixn_points with screen borders, add to new_vertices
 	Vec2 ixn_points[2];
 	for (int i = 0; i < TRIGON_VERT_COUNT; i++) {
 		int ixn_points_count =
 				rect_line_intersect(rect_start, rect_end, trigon.v[i],
 														trigon.v[(i + 1) % 3], ixn_points);
 		for (int i = 0; i < ixn_points_count; i++) {
-			fpoints[fpoint_count++] = ixn_points[i];
+			new_vertices[new_vertex_count++] = get_IVec2(ixn_points[i]);
 		}
 	}
 
-
-	// add points inside rect borders to fpoints
-	// if (rect_contains_point(rect_start, rect_end, p0)) {
-	// 	fpoints[fpoint_count++] = p0;
-	// }
-	// if (rect_contains_point(rect_start, rect_end, p1)) {
-	// 	fpoints[fpoint_count++] = p1;
-	// }
-	// if (rect_contains_point(rect_start, rect_end, p2)) {
-	// 	fpoints[fpoint_count++] = p2;
-	// }
-
+	// add vertices inside screen borders to new_vertices
 	for (int i = 0; i < TRIGON_VERT_COUNT; i++) {
 		if (rect_contains_point(rect_start, rect_end, trigon.v[i])) {
-			fpoints[fpoint_count++] = trigon.v[i];
+			new_vertices[new_vertex_count++] = get_IVec2(trigon.v[i]);
 		}
 	}
 
-
-
-	// for (int i = 0; i < fpoint_count; i++) {
-	// 	Vec2 p = fpoints[i];
-	// 	printf("fpoints2: %f, %f\n", p.x, p.y);
-	// }
-	// printf("fpoints count1: %d\n", fpoint_count);
-	//
-
-
-
 	// check if screen corner lies inside the triangle
-	BaryCoords upper_left = get_bary_coords(p0, p1, p2, (Vec2){x_min, y_min});
+	BaryCoords upper_left = get_bary_coords(a, b, c, (Vec2){x_min, y_min});
 	if (upper_left.alpha > 0 && upper_left.beta > 0 && upper_left.gamma > 0) {
-		fpoints[fpoint_count++] = (Vec2){x_min, y_min};
+		new_vertices[new_vertex_count++] = (IVec2){x_min, y_min};
 	}
-	BaryCoords upper_right = get_bary_coords(p0, p1, p2, (Vec2){x_max, y_min});
+	BaryCoords upper_right = get_bary_coords(a, b, c, (Vec2){x_max, y_min});
 	if (upper_right.alpha > 0 && upper_right.beta > 0 && upper_right.gamma > 0) {
-		fpoints[fpoint_count++] = (Vec2){x_max, y_min};
+		new_vertices[new_vertex_count++] = (IVec2){x_max, y_min};
 	}
-	BaryCoords lower_left = get_bary_coords(p0, p1, p2, (Vec2){x_min, y_max});
+	BaryCoords lower_left = get_bary_coords(a, b, c, (Vec2){x_min, y_max});
 	if (lower_left.alpha > 0 && lower_left.beta > 0 && lower_left.gamma > 0) {
-		fpoints[fpoint_count++] = (Vec2){x_min, y_max};
+		new_vertices[new_vertex_count++] = (IVec2){x_min, y_max};
 	}
-	BaryCoords lower_right = get_bary_coords(p0, p1, p2, (Vec2){x_max, y_max});
+	BaryCoords lower_right = get_bary_coords(a, b, c, (Vec2){x_max, y_max});
 	if (lower_right.alpha > 0 && lower_right.beta > 0 && lower_right.gamma > 0) {
-		fpoints[fpoint_count++] = (Vec2){x_max, y_max};
+		new_vertices[new_vertex_count++] = (IVec2){x_max, y_max};
 	}
 
-	for (int i = 0; i < fpoint_count; i++) {
-		draw_rect(r, add_Vec2(fpoints[i], (Vec2){3, 3}),
-							sub_Vec2(fpoints[i], (Vec2){3, 3}), 0xFF00FF00);
-	}
+	return new_vertex_count;
+}
 
-	draw_rect(r, add_Vec2(p0, (Vec2){3, 3}),
-						sub_Vec2(p0, (Vec2){3, 3}), 0xFFFF0000);
-	draw_rect(r, add_Vec2(p1, (Vec2){3, 3}),
-						sub_Vec2(p1, (Vec2){3, 3}), 0xFFFF0000);
-	draw_rect(r, add_Vec2(p2, (Vec2){3, 3}),
-						sub_Vec2(p2, (Vec2){3, 3}), 0xFFFF0000);
+void draw_trigon(Renderer *r, Vec2 p0, Vec2 p1, Vec2 p2, uint32_t color) {
+	Trigon trigon = new_Trigon(world_to_screen(&r->viewport, p0),
+														 world_to_screen(&r->viewport, p1),
+														 world_to_screen(&r->viewport, p2));
 
+	// define screen borders
+	float x_min = 200.0f;
+	float x_max = (float)r->pixelbuffer.width - 200.0f;
+	float y_min = 200.0f;
+	float y_max = (float)r->pixelbuffer.height - 200.0f;
 
-	printf("fpoints count2: %d\n", fpoint_count);
+	// there can only ever be 7 points when cutting the trigon
+	const int new_vertices_max = 9;
+	IVec2 new_vertices[new_vertices_max];
+	int new_vertex_count = clamp_trigon(x_min, x_max, y_min, y_max,
+		trigon, new_vertices);
 
-	if (fpoint_count < 3) { return; }
+	// return early if no trigon can be formed
+	if (new_vertex_count < 3) { return; }
 
-	// round all points to nerest int
-	int point_count = fpoint_count;
-	IVec2 points[fpoint_count];
-	for (size_t i = 0; i < fpoint_count; i++) {
-		// points.push_back(world_to_screen(viewport, fpoints[i]).get_IVec2());
-		points[i] = get_IVec2(fpoints[i]);
-	}
+	// --- debug ---
+	// for (int i = 0; i < new_vertex_count; i++) {
+	// 	draw_rect(r, add_Vec2(get_Vec2(new_vertices[i]), (Vec2){3, 3}),
+	// 						get_Vec2(sub_IVec2(new_vertices[i], (IVec2){3, 3})), 0xFF00FF00);
+	// }
+	//
+	// draw_rect(r, add_Vec2(p0, (Vec2){3, 3}),
+	// 					sub_Vec2(p0, (Vec2){3, 3}), 0xFFFF0000);
+	// draw_rect(r, add_Vec2(p1, (Vec2){3, 3}),
+	// 					sub_Vec2(p1, (Vec2){3, 3}), 0xFFFF0000);
+	// draw_rect(r, add_Vec2(p2, (Vec2){3, 3}),
+	// 					sub_Vec2(p2, (Vec2){3, 3}), 0xFFFF0000);
 
-	// fmt::print("points.size(): {}\n", points.size());
 	typedef struct ITrigon {
 		IVec2 p0;
 		IVec2 p1;
 		IVec2 p2;
 	} ITrigon;
-	ITrigon trigons[4]; // max possible trigon amount
-
+	const int trigons_max = 5;
+	ITrigon trigons[trigons_max];
 	int trigon_count = 0;
 
 	// ---- split quad into trigons ----
-	if (point_count > 3) {
+	if (new_vertex_count > 3) {
 		Vec2 centeroid = {};
-		for (int i = 0; i < point_count; i++) {
-			centeroid.x += points[i].x;
-			centeroid.y += points[i].y;
+		for (int i = 0; i < new_vertex_count; i++) {
+			centeroid.x += new_vertices[i].x;
+			centeroid.y += new_vertices[i].y;
 		}
-		centeroid = mul_Vec2(centeroid, 1.0f/point_count);
+		centeroid = mul_Vec2(centeroid, 1.0f/new_vertex_count);
 
-		IndexAngle index_angles[point_count];
-		for (int i = 0; i < point_count; i++) {
-			Vec2 v = sub_Vec2(get_Vec2(points[i]), centeroid);
+		IndexAngle index_angles[new_vertex_count];
+		for (int i = 0; i < new_vertex_count; i++) {
+			Vec2 v = sub_Vec2(get_Vec2(new_vertices[i]), centeroid);
 			index_angles[i] = (IndexAngle){i, atan2(v.y, v.x)};
 		}
 
-		qsort(index_angles, point_count, sizeof(IndexAngle), compare_angles);
+		qsort(index_angles, new_vertex_count, sizeof(IndexAngle), compare_angles);
 
-		for (int i = 0; i < point_count - 2; i++) {
-			trigons[trigon_count++] = (ITrigon){points[index_angles[0].index],
-				points[index_angles[i+1].index], points[index_angles[i+2].index]};
+		for (int i = 0; i < new_vertex_count - 2; i++) {
+			trigons[trigon_count++] = (ITrigon){new_vertices[index_angles[0].index],
+				new_vertices[index_angles[i+1].index], new_vertices[index_angles[i+2].index]};
 		}
 	} else {
-		trigons[trigon_count++] = (ITrigon){points[0], points[1], points[2]};
+		trigons[trigon_count++] = (ITrigon){new_vertices[0], new_vertices[1], new_vertices[2]};
 	}
-
-	printf("### Trigon count: %d\n", trigon_count);
 
 	// ---- draw all trigons ----
 	for (int i = 0; i < trigon_count; i++) {
@@ -499,12 +444,22 @@ void draw_thick_line(Renderer *r, Vec2 start, Vec2 end, float wd,
 	Vec2 line = sub_Vec2(end, start);
 
 	Vec2 a = get_ortho_Vec2(line);
-	norm_Vec2(a);
+	norm_Vec2(&a);
 
 	Vec2 p0 = add_Vec2(start, mul_Vec2(a, (wd/2.0f)));
 	Vec2 p1 = sub_Vec2(p0, mul_Vec2(a, wd));
 	Vec2 p2 = add_Vec2(p1, line);
 	Vec2 p3 = add_Vec2(p0, line);
+
+	// --- debug ---
+	// draw_rect(r, add_Vec2(p0, (Vec2){3, 3}),
+	// 					sub_Vec2(p0, (Vec2){3, 3}), 0xFFFF0000);
+	// draw_rect(r, add_Vec2(p1, (Vec2){3, 3}),
+	// 					sub_Vec2(p1, (Vec2){3, 3}), 0xFFFF0000);
+	// draw_rect(r, add_Vec2(p2, (Vec2){3, 3}),
+	// 					sub_Vec2(p2, (Vec2){3, 3}), 0xFFFF0000);
+	// draw_rect(r, add_Vec2(p3, (Vec2){3, 3}),
+	// 					sub_Vec2(p3, (Vec2){3, 3}), 0xFFFF0000);
 
 	draw_trigon(r, p0, p1,p3, color);
 	draw_trigon(r, p1, p2,p3, color);
