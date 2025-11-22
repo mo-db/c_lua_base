@@ -21,7 +21,8 @@ int main() {
 		SDL_RenderClear(app.renderer);
 
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
-		draw_rect(app.my_renderer, (Vec2){100, 100}, app.state.input.mouse, 0xFF0000FF);
+		// draw_rect(app.my_renderer, (Vec2){100, 100}, app.state.input.mouse, 0xFF0000FF);
+		draw_thick_line(app.my_renderer, (Vec2){100, 100}, app.state.input.mouse, 10.0, 0xFF0000FF);
 
 		SDL_UpdateTexture(app.window_texture, nullptr,
 											app.my_renderer->pixelbuffer.pixels, app.width * 4);

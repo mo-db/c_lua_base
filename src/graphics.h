@@ -28,3 +28,9 @@ Vec2 get_ortho_Vec2(const Vec2 v);
 float get_mag_Vec2(const Vec2 v);
 float dot_Vec2(const Vec2 v0, const Vec2 v1);
 float distance_Vec2(const Vec2 v0, const Vec2 v1);
+
+bool rect_contains_point(Vec2 rect_start, Vec2 rect_end, Vec2 p);
+int rect_ray_intersect(Vec2 rect_start, Vec2 rect_end, Vec2 line_start,
+                        Vec2 line_end, Vec2 *ixn_points);
+int rect_line_intersect(Vec2 rect_start, Vec2 rect_end, Vec2 line_start,
+                        Vec2 line_end, Vec2 *ixn_points);

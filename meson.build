@@ -1,5 +1,5 @@
 project('lua_basics', 'c', 
-  default_options : ['c_std=c23', 'buildtype=debugoptimized'])
+  default_options : ['c_std=c23', 'buildtype=debug'])
 
 # dependency search order: pkgconf -> cmake -> wrap-subprojects
 luajit_dep = dependency('luajit')
