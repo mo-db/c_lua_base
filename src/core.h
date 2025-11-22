@@ -12,4 +12,11 @@
 #define PI 3.14159265359
 #define EPSILON 1e-6
 
+#define EXIT()\
+	do {\
+		fprintf(stderr,"ERROR [%s:%d] %s()\n",\
+							 __FILE__, __LINE__, __func__);\
+		exit(EXIT_FAILURE);\
+	} while (0)
+
 bool core_epsilon_equal(double x, double y);

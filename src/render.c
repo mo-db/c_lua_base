@@ -16,17 +16,17 @@ Renderer* new_renderer(int width, int height) {
 }
 
 void destroy_renderer(Renderer* renderer) {
-	if (renderer->pixelbuffer.pixels == NULL) { exit(EXIT_FAILURE); }
+	if (renderer->pixelbuffer.pixels == NULL) { EXIT(); }
 	free(renderer->pixelbuffer.pixels);
-	if (renderer == NULL) { exit(EXIT_FAILURE); }
+	if (renderer == NULL) { EXIT(); }
 	free(renderer);
 }
 
 void renderer_clear(PixelBuffer* pixel_buffer, uint32_t color) {
 	int width = pixel_buffer->width;
 	int height = pixel_buffer->height;
-  if (width <= 0 || height <= 0) { exit(EXIT_FAILURE); }
-	if ((size_t)width > SIZE_MAX / (size_t)height) { exit(EXIT_FAILURE); }
+  if (width <= 0 || height <= 0) { EXIT(); }
+	if ((size_t)width > SIZE_MAX / (size_t)height) { EXIT(); }
 
 	for (int i = 0; i < width * height; i++) {
 		pixel_buffer->pixels[i] = color;
@@ -89,9 +89,9 @@ void draw_lerp_line(Renderer *r, Vec2 p0, Vec2 p1, uint32_t color) {
 	IVec2 v0 = get_IVec2(world_to_screen(&r->viewport, p0));
 	IVec2 v1 = get_IVec2(world_to_screen(&r->viewport, p1));
 
-	int dx = abs(v1.x - v0.x);
-	int dy = abs(v1.y - v0.y);
-	int length = MAX(dx, dy);
+	int dx = v1.x - v0.x;
+	int dy = v1.y - v0.y;
+	int length = MAX(abs(dx), abs(dy));
 
 	IVec2 pixels[length];
 
@@ -100,17 +100,6 @@ void draw_lerp_line(Renderer *r, Vec2 p0, Vec2 p1, uint32_t color) {
   float y_displace = (float)dy / length;
 
 	for (int i = 0; i < length; i++) {
-		// float t = static_cast<float>(i) / static_cast<float>(length);
-
-		// parametric line can be written in two forms:
-		// l(t) = start_point + t * v(start_point, end_point)
-		// float x = t * static_cast<float>(delta_x) + static_cast<float>(start.x);
-		// float y = t * static_cast<float>(delta_y) + static_cast<float>(start.y);
-
-		// l(t) = (1 - t) * start_point + t * end_point
-		// float x = (1.0f - t) * static_cast<float>(start.x) + t * static_cast<float>(end.x);
-		// float y = (1.0f - t) * static_cast<float>(start.y) + t * static_cast<float>(end.y);
-
 		// use normal vector to avoid division every step
 		pixels[i] = (IVec2){(int)round(i * x_displace + v0.x),
 												(int)round(i * y_displace + v0.y)};
@@ -135,9 +124,9 @@ void draw_lerp_line_trigon(PixelBuffer *pixelbuffer, IVec2 v0, IVec2 v1,
   } else if (v0.y == v1.y || v0.y == v2.y || v1.y == v2.y) {
 		// do nothing
   } else {
-		exit(EXIT_FAILURE);
-
+		EXIT();
   }
+
 	// fmt::print("v0: {}, {}\nv1: {}, {}\nv2 {}, {}\n", v0.x, v0.y, v1.x, v1.y,
 	// 		v2.x, v2.y);
 	// fmt::print("switched: {}\n", switched_xy);
@@ -180,6 +169,7 @@ void draw_lerp_line_trigon(PixelBuffer *pixelbuffer, IVec2 v0, IVec2 v1,
 		}
 	}
 
+
 	int dx_left = abs(v_left.x - v_start.x);
 	int dy_left = abs(v_left.y - v_start.y);
 	int sx_left = (v_start.x < v_left.x) ? 1 : -1;
@@ -198,8 +188,8 @@ void draw_lerp_line_trigon(PixelBuffer *pixelbuffer, IVec2 v0, IVec2 v1,
 	// 		dx_right > pixelbuffer->width ||
 	// 		dy_left > pixelbuffer->width ||
 	// 		dy_right > pixelbuffer->width) {
-		printf("dx_left: %d, dx_right: %d, dy_left: %d, dy_right %d\n",
-				dx_left, dx_right, dy_left, dy_right);
+		// printf("dx_left: %d, dx_right: %d, dy_left: %d, dy_right %d\n",
+				// dx_left, dx_right, dy_left, dy_right);
 		// return;
 	// }
 
@@ -284,53 +274,129 @@ int compare_angles(const void* in_0, const void* in_1){
 }
 
 void draw_trigon(Renderer *r, Vec2 p0, Vec2 p1, Vec2 p2, uint32_t color) {
+	Trigon trigon = new_Trigon(p0, p1, p2);
+	// p0 = world_to_screen(&r->viewport, p0);
+	// p1 = world_to_screen(&r->viewport, p1);
+	// p2 = world_to_screen(&r->viewport, p2);
 
-	p0 = world_to_screen(&r->viewport, p0);
-	p1 = world_to_screen(&r->viewport, p1);
-	p2 = world_to_screen(&r->viewport, p2);
+	trigon.a = world_to_screen(&r->viewport, p0);
+	trigon.b = world_to_screen(&r->viewport, p1);
+	trigon.c = world_to_screen(&r->viewport, p2);
+
+	// for (int i = 0; i < TRIGON_VERT_COUNT; i++) {
+	// 	trigon.v[i] = world_to_screen(&r->viewport, p0);
+	// }
+
+	printf("p0: %f, %f\n", p0.x, p0.y);
+	printf("p1: %f, %f\n", p1.x, p1.y);
+	printf("p2: %f, %f\n", p2.x, p2.y);
 
 	// define screen borders
-	Vec2 rect_start = {200.0f, 200.0f};
-	Vec2 rect_end = {(float)r->pixelbuffer.width - 200.0f,
-								(float)r->pixelbuffer.height - 200.0f};
+	float x_min = 200.0f;
+	float x_max = (float)r->pixelbuffer.width - 200.0f;
+	float y_min = 200.0f;
+	float y_max = (float)r->pixelbuffer.height - 200.0f;
+	Vec2 rect_start = {x_min, y_min};
+	Vec2 rect_end = {x_max, y_max};
 
 	// all relevant points to build trigons
-	Vec2 fpoints[4];
-
-	// calculate ixn_points with screen borders
-	Vec2 ixn_points0[2];
-	Vec2 ixn_points1[2];
-	Vec2 ixn_points2[2];
-	int ixn_points0_count =
-			rect_line_intersect(rect_start, rect_end, p0, p1, ixn_points0);
-	int ixn_points1_count =
-			rect_line_intersect(rect_start, rect_end, p0, p2, ixn_points1);
-	int ixn_points2_count =
-			rect_line_intersect(rect_start, rect_end, p1, p2, ixn_points2);
-
+	Vec2 fpoints[16];
 	int fpoint_count = 0;
 
-  // add ixn_points to fpoints
-	for (size_t i = 0; i < ixn_points0_count; i++) {
-		fpoints[fpoint_count++] = ixn_points0[i];
-	}
-	for (size_t i = 0; i < ixn_points1_count; i++) {
-		fpoints[fpoint_count++] = ixn_points1[i];
-	}
-	for (size_t i = 0; i < ixn_points2_count; i++) {
-		fpoints[fpoint_count++] = ixn_points2[i];
+	// calculate ixn_points with screen borders
+	// Vec2 ixn_points0[2];
+	// Vec2 ixn_points1[2];
+	// Vec2 ixn_points2[2];
+	// int ixn_points0_count =
+	// 		rect_line_intersect(rect_start, rect_end, p0, p1, ixn_points0);
+	// int ixn_points1_count =
+	// 		rect_line_intersect(rect_start, rect_end, p0, p2, ixn_points1);
+	// int ixn_points2_count =
+	// 		rect_line_intersect(rect_start, rect_end, p1, p2, ixn_points2);
+	//
+	//  // add ixn_points to fpoints
+	// for (size_t i = 0; i < ixn_points0_count; i++) {
+	// 	fpoints[fpoint_count++] = ixn_points0[i];
+	// }
+	// for (size_t i = 0; i < ixn_points1_count; i++) {
+	// 	fpoints[fpoint_count++] = ixn_points1[i];
+	// }
+	// for (size_t i = 0; i < ixn_points2_count; i++) {
+	// 	fpoints[fpoint_count++] = ixn_points2[i];
+	// }
+
+
+	Vec2 ixn_points[2];
+	for (int i = 0; i < TRIGON_VERT_COUNT; i++) {
+		int ixn_points_count =
+				rect_line_intersect(rect_start, rect_end, trigon.v[i],
+														trigon.v[(i + 1) % 3], ixn_points);
+		for (int i = 0; i < ixn_points_count; i++) {
+			fpoints[fpoint_count++] = ixn_points[i];
+		}
 	}
 
+
 	// add points inside rect borders to fpoints
-	if (rect_contains_point(rect_start, rect_end, p0)) {
-		fpoints[fpoint_count++] = p0;
+	// if (rect_contains_point(rect_start, rect_end, p0)) {
+	// 	fpoints[fpoint_count++] = p0;
+	// }
+	// if (rect_contains_point(rect_start, rect_end, p1)) {
+	// 	fpoints[fpoint_count++] = p1;
+	// }
+	// if (rect_contains_point(rect_start, rect_end, p2)) {
+	// 	fpoints[fpoint_count++] = p2;
+	// }
+
+	for (int i = 0; i < TRIGON_VERT_COUNT; i++) {
+		if (rect_contains_point(rect_start, rect_end, trigon.v[i])) {
+			fpoints[fpoint_count++] = trigon.v[i];
+		}
 	}
-	if (rect_contains_point(rect_start, rect_end, p1)) {
-		fpoints[fpoint_count++] = p1;
+
+
+
+	// for (int i = 0; i < fpoint_count; i++) {
+	// 	Vec2 p = fpoints[i];
+	// 	printf("fpoints2: %f, %f\n", p.x, p.y);
+	// }
+	// printf("fpoints count1: %d\n", fpoint_count);
+	//
+
+
+
+	// check if screen corner lies inside the triangle
+	BaryCoords upper_left = get_bary_coords(p0, p1, p2, (Vec2){x_min, y_min});
+	if (upper_left.alpha > 0 && upper_left.beta > 0 && upper_left.gamma > 0) {
+		fpoints[fpoint_count++] = (Vec2){x_min, y_min};
 	}
-	if (rect_contains_point(rect_start, rect_end, p2)) {
-		fpoints[fpoint_count++] = p2;
+	BaryCoords upper_right = get_bary_coords(p0, p1, p2, (Vec2){x_max, y_min});
+	if (upper_right.alpha > 0 && upper_right.beta > 0 && upper_right.gamma > 0) {
+		fpoints[fpoint_count++] = (Vec2){x_max, y_min};
 	}
+	BaryCoords lower_left = get_bary_coords(p0, p1, p2, (Vec2){x_min, y_max});
+	if (lower_left.alpha > 0 && lower_left.beta > 0 && lower_left.gamma > 0) {
+		fpoints[fpoint_count++] = (Vec2){x_min, y_max};
+	}
+	BaryCoords lower_right = get_bary_coords(p0, p1, p2, (Vec2){x_max, y_max});
+	if (lower_right.alpha > 0 && lower_right.beta > 0 && lower_right.gamma > 0) {
+		fpoints[fpoint_count++] = (Vec2){x_max, y_max};
+	}
+
+	for (int i = 0; i < fpoint_count; i++) {
+		draw_rect(r, add_Vec2(fpoints[i], (Vec2){3, 3}),
+							sub_Vec2(fpoints[i], (Vec2){3, 3}), 0xFF00FF00);
+	}
+
+	draw_rect(r, add_Vec2(p0, (Vec2){3, 3}),
+						sub_Vec2(p0, (Vec2){3, 3}), 0xFFFF0000);
+	draw_rect(r, add_Vec2(p1, (Vec2){3, 3}),
+						sub_Vec2(p1, (Vec2){3, 3}), 0xFFFF0000);
+	draw_rect(r, add_Vec2(p2, (Vec2){3, 3}),
+						sub_Vec2(p2, (Vec2){3, 3}), 0xFFFF0000);
+
+
+	printf("fpoints count2: %d\n", fpoint_count);
 
 	if (fpoint_count < 3) { return; }
 
@@ -348,35 +414,36 @@ void draw_trigon(Renderer *r, Vec2 p0, Vec2 p1, Vec2 p2, uint32_t color) {
 		IVec2 p1;
 		IVec2 p2;
 	} ITrigon;
-	ITrigon trigons[2]; // max possible trigon amount
+	ITrigon trigons[4]; // max possible trigon amount
 
 	int trigon_count = 0;
 
 	// ---- split quad into trigons ----
-	if (point_count == 4) {
+	if (point_count > 3) {
 		Vec2 centeroid = {};
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < point_count; i++) {
 			centeroid.x += points[i].x;
 			centeroid.y += points[i].y;
 		}
-		centeroid = mul_Vec2(centeroid, 0.25);
+		centeroid = mul_Vec2(centeroid, 1.0f/point_count);
 
-		IndexAngle index_angles[4];
-		for (int i = 0; i < 4; i++) {
+		IndexAngle index_angles[point_count];
+		for (int i = 0; i < point_count; i++) {
 			Vec2 v = sub_Vec2(get_Vec2(points[i]), centeroid);
 			index_angles[i] = (IndexAngle){i, atan2(v.y, v.x)};
 		}
 
-		qsort(index_angles, 4, sizeof(IndexAngle), compare_angles);
+		qsort(index_angles, point_count, sizeof(IndexAngle), compare_angles);
 
-
-		trigons[trigon_count++] = (ITrigon){points[index_angles[0].index],
-			points[index_angles[2].index], points[index_angles[1].index]};
-		trigons[trigon_count++] = (ITrigon){points[index_angles[0].index],
-			points[index_angles[2].index], points[index_angles[3].index]};
+		for (int i = 0; i < point_count - 2; i++) {
+			trigons[trigon_count++] = (ITrigon){points[index_angles[0].index],
+				points[index_angles[i+1].index], points[index_angles[i+2].index]};
+		}
 	} else {
 		trigons[trigon_count++] = (ITrigon){points[0], points[1], points[2]};
 	}
+
+	printf("### Trigon count: %d\n", trigon_count);
 
 	// ---- draw all trigons ----
 	for (int i = 0; i < trigon_count; i++) {

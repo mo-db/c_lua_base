@@ -53,15 +53,43 @@ float distance_Vec2(const Vec2 v0, const Vec2 v1) {
   return sqrt(dx * dx + dy * dy);
 }
 
+// --- Rect, Trigon ---
+Rect new_Rect(const Vec2 a, const Vec2 b) {
+	Rect result = {};
+	result.a = a;
+	result.b = b;
+	return result;
+}
 
+IRect new_IRect(const IVec2 a, const IVec2 b) {
+	IRect result = {};
+	result.a = a;
+	result.b = b;
+	return result;
+}
 
-// --- rect ---
+Trigon new_Trigon(const Vec2 a, const Vec2 b, const Vec2 c) {
+	Trigon result = {};
+	result.a = a;
+	result.b = b;
+	result.c = c;
+	return result;
+}
+
+ITrigon new_ITrigon(const IVec2 a, const IVec2 b, const IVec2 c) {
+	ITrigon result = {};
+	result.a = a;
+	result.b = b;
+	result.c = c;
+	return result;
+}
+
 bool rect_contains_point(Vec2 rect_start, Vec2 rect_end, Vec2 p) {
   float x_min = MIN(rect_start.x, rect_end.x);
   float x_max = MAX(rect_start.x, rect_end.x);
   float y_min = MIN(rect_start.y, rect_end.y);
   float y_max = MAX(rect_start.y, rect_end.y);
-  return p.x > x_min && p.x < x_max && p.y > y_min && p.y < y_max;
+  return p.x >= x_min && p.x <= x_max && p.y >= y_min && p.y <= y_max;
 }
 
 int rect_ray_intersect(Vec2 rect_start, Vec2 rect_end, Vec2 line_start,
@@ -141,4 +169,20 @@ int rect_line_intersect(Vec2 rect_start, Vec2 rect_end, Vec2 line_start,
     ixn_points[index++] = (Vec2){x_max, ixn_h};
   }
 	return index;
+}
+
+double signed_triangle_area(int ax, int ay, int bx, int by, int cx, int cy) {
+    return .5*((by-ay)*(bx+ax) + (cy-by)*(cx+bx) + (ay-cy)*(ax+cx));
+}
+
+BaryCoords get_bary_coords(Vec2 a, Vec2 b, Vec2 c, Vec2 p) {
+	float total_area = signed_triangle_area(a.x, a.y, b.x, b.y, c.x, c.y);
+	double alpha = signed_triangle_area(p.x, p.y, b.x, b.y, c.x, c.y) / total_area;
+	double beta  = signed_triangle_area(p.x, p.y, c.x, c.y, a.x, a.y) / total_area;
+	double gamma = signed_triangle_area(p.x, p.y, a.x, a.y, b.x, b.y) / total_area;
+	// printf("total_area %f\n", total_area);
+	// printf("alpha %f\n", alpha);
+	// printf("beta %f\n", beta);
+	// printf("gamma %f\n", gamma);
+	return (BaryCoords){alpha, beta, gamma};
 }

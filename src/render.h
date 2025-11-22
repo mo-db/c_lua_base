@@ -24,10 +24,6 @@ Renderer* new_renderer(const int w, const int h);
 void destroy_renderer(Renderer* renderer);
 void renderer_clear(PixelBuffer* pixel_buffer, uint32_t color);
 
-struct Rect {};
-struct Line {};
-struct Trigon {};
-
 // --- base ---
 void color_pixels(PixelBuffer* pixel_buffer, IVec2* pixels, int count, uint32_t color);
 Vec2 world_to_screen(Viewport* viewport, const Vec2 vertex_world);
