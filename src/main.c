@@ -22,8 +22,9 @@ int main() {
 
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 		// draw_rect(app.my_renderer, (Vec2){100, 100}, app.state.input.mouse, 0xFF0000FF);
-		draw_thick_line(app.my_renderer, (Vec2){100, 100}, app.state.input.mouse, 10.0, 0xFF0000FF);
+		// draw_thick_line(app.my_renderer, (Vec2){100, 100}, app.state.input.mouse, 10.0, 0xFF0000FF);
 
+		draw_trigon(app.my_renderer, (Vec2){300, 200}, (Vec2){100, 100}, app.state.input.mouse, 0xFF0000FF);
 		SDL_UpdateTexture(app.window_texture, nullptr,
 											app.my_renderer->pixelbuffer.pixels, app.width * 4);
 		SDL_RenderTexture(app.renderer, app.window_texture, NULL, NULL);
