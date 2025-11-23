@@ -23,6 +23,8 @@ k = 0
 -- Symbol (opt)Parameters : (opt)condition : (opt)context -> replacement
 productions = {
   [0] = 'S -> A[-A]{+A]',
-  [1] = 'A{x,y,v} : u < 5 : bAB -> ',
+  [1] = 'A{x} : u < 5 : bAB -> ',
   -- ...
 }
+
+productions_size = #productions + 1

@@ -10,10 +10,9 @@
 int main() {
 	App app = {};
 	app_init(&app, W, H);
-	lua_State *L = app.state.L;
-	if (!check_lua(L, luaL_dofile(L, "scripts/test.lua"))){
-		EXIT();
-	}
+
+	app.state.L = core_lua_dofile("scripts/gramma_def.lua");
+
 
 	// --- foo setup ---
 	Trigon trigons[N_TRIGONS];
@@ -29,12 +28,14 @@ int main() {
 		process_events(&app);
 		query_input(&app.state);
 		update_viewport(&app.state, &app.my_renderer->viewport);
-		update_lua_State(&app.state);
+		// update_lua_State(&app.state);
 		SDL_SetRenderDrawColor(app.renderer, 0, 0, 0, 255);
 		SDL_RenderClear(app.renderer);
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
-		printf("input: %s\n", app.state.text);
+		bar(&app);
+
+		// printf("input: %s\n", app.state.text);
 
 		// --- foo ---
 		// uint64_t start = SDL_GetPerformanceCounter();

@@ -8,3 +8,4 @@
 #define N_TRIGONS 200
 
 void foo(App* app, Trigon* trigons);
+void bar(App* app);

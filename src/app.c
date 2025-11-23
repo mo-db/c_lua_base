@@ -118,11 +118,6 @@ void update_viewport(State* state, Viewport* viewport) {
 
 void update_lua_State(State* state) {
 	if (became_true(state->input.shift)) {
-		state->L = luaL_newstate();
-		luaL_openlibs(state->L);
-		if (check_lua(state->L, luaL_dofile(state->L, "scripts/test.lua"))){
-		} else {
-			EXIT();
-		}
+		state->L = core_lua_dofile("scripts/test.lua");
 	}
 }
