@@ -5,4 +5,6 @@
 #include "graphics.h"
 #include "render.h"
 
-void foo(App* app);
+#define N_TRIGONS 200
+
+void foo(App* app, Trigon* trigons);

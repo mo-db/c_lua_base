@@ -1,6 +1,7 @@
 #include "foo.h"
 
-void foo(App* app) {
+void foo(App* app, Trigon* trigons) {
+
 	int width = app->my_renderer->pixelbuffer.width;
 	int height = app->my_renderer->pixelbuffer.height;
 
@@ -13,17 +14,7 @@ void foo(App* app) {
 
 	Trigon t = new_Trigon(a, b, add_Vec2(a, b));
 
-	// lua_State* L = luaL_newstate(); // creates a lua VM?
-	// luaL_openlibs(L); // adds basic libs to VM
-
-	// if (check_lua(L, luaL_dofile(L, "scripts/test.lua"))){
-	// 	lua_getglobal(L, "MV");
-	// } else {
-	// 	EXIT();
-	// }
-
 	if (became_true(app->state.input.shift)) {
-		// lua_close (L);
 		L = luaL_newstate();
 		luaL_openlibs(L);
 		app->state.L = L;
@@ -35,23 +26,24 @@ void foo(App* app) {
 
 	lua_getglobal(L, "MV");
 	if (lua_isfunction(L, -1)) {
-		lua_pushlightuserdata(L, &v);
-		lua_pushlightuserdata(L, &t);
-		// lua_pushnumber(L, 2);
+		lua_pushnumber(L, N_TRIGONS);
+		lua_pushlightuserdata(L, trigons);
 		if (check_lua(L, lua_pcall(L, 2, 1, 0))) {
 			printf("success\n");
-			// lua has poped the two variables of the stack
-			// result is now on top of the stack
 		} else {
 			printf("huh?\n");
 		}
-		// if there was an error, the error value is on the stack
 	}
 
 	printf("in c: %f, %f\n", v[0].x, v[0].y);
 	printf("in c: %f, %f\n", v[1].x, v[1].y);
 
 	draw_trigon(app->my_renderer, t.a, t.b, t.c, 0xFFFFFFFF);
+
+	for (int i = 0; i < N_TRIGONS; i++) {
+		Trigon tr = trigons[i];
+		draw_trigon(app->my_renderer, tr.a, tr.b, tr.c, (int)(SDL_randf() * (float)0xFFFFFFFF));
+	}
 
 	// for (int i = 0; i < 500; i++) {
 	// 	float rand1 = SDL_randf();
