@@ -4,12 +4,19 @@
 #include "render.h"
 #include "foo.h"
 
-#define W 1920
-#define H 1080
+#define W 640
+#define H 480
 
 int main() {
 	App app = {};
 	app_init(&app, W, H);
+
+	
+	lua_State *L = app.state.L;
+	if (!check_lua(L, luaL_dofile(L, "scripts/test.lua"))){
+		EXIT();
+	}
+	
 	while (!app.state.context.quit) {
 		process_events(&app.state);
 		query_input(&app.state);
@@ -18,13 +25,21 @@ int main() {
 		SDL_RenderClear(app.renderer);
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
+		// if (became_true(app.state.input.shift)) {
+		// 	L = luaL_newstate();
+		// 	luaL_openlibs(L); // adds basic libs to VM
+		// 	if (!check_lua(L, luaL_dofile(L, "scripts/test.lua"))){
+		// 		EXIT();
+		// 	}
+		// }
+
 		uint64_t start = SDL_GetPerformanceCounter();
 		foo(&app);
 		uint64_t end = SDL_GetPerformanceCounter();
 		uint64_t count = SDL_GetPerformanceFrequency();
-		printf("elapsed: %f\n", ((double)(end-start)/count) * 1000);
+		// printf("elapsed: %f\n", ((double)(end-start)/count) * 1000);
 
-		SDL_UpdateTexture(app.window_texture, nullptr, app.my_renderer->pixelbuffer.pixels,
+		SDL_UpdateTexture(app.window_texture, NULL, app.my_renderer->pixelbuffer.pixels,
 											app.width * 4);
 		SDL_RenderTexture(app.renderer, app.window_texture, NULL, NULL);
     SDL_RenderPresent(app.renderer);

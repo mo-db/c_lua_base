@@ -2,11 +2,12 @@
 
 Renderer* new_renderer(int width, int height) {
   if (width <= 0 || height <= 0) { return NULL; }
-	if ((size_t)width > SIZE_MAX / (size_t)height) { return NULL; }
+	uint64_t n_pixels = (uint64_t)width * (uint64_t)height;
+	if (n_pixels > INT_MAX) { EXIT(); }
 
 	Renderer* r = calloc(1, sizeof(Renderer));
 	if (!r) { return NULL; }
-	r->pixelbuffer.pixels = (uint32_t*)malloc(width * height * sizeof(uint32_t));
+	r->pixelbuffer.pixels = (uint32_t*)malloc(n_pixels * sizeof(uint32_t));
 	if (!r->pixelbuffer.pixels) { return NULL; }
 
 	r->viewport.scale = 1.0f;
@@ -25,10 +26,12 @@ void destroy_renderer(Renderer* renderer) {
 void renderer_clear(PixelBuffer* pixel_buffer, uint32_t color) {
 	int width = pixel_buffer->width;
 	int height = pixel_buffer->height;
-  if (width <= 0 || height <= 0) { EXIT(); }
-	if ((size_t)width > SIZE_MAX / (size_t)height) { EXIT(); }
 
-	for (int i = 0; i < width * height; i++) {
+  if (width <= 0 || height <= 0) { EXIT(); }
+	uint64_t n_pixels = (uint64_t)width * (uint64_t)height;
+	if (n_pixels > INT_MAX) { EXIT(); }
+
+	for (int i = 0; i < n_pixels; i++) {
 		pixel_buffer->pixels[i] = color;
 	} 
 }
@@ -356,11 +359,6 @@ void draw_trigon(Renderer *r, Vec2 p0, Vec2 p1, Vec2 p2, uint32_t color) {
 	// draw_rect(r, add_Vec2(p2, (Vec2){3, 3}),
 	// 					sub_Vec2(p2, (Vec2){3, 3}), 0xFFFF0000);
 
-	typedef struct ITrigon {
-		IVec2 p0;
-		IVec2 p1;
-		IVec2 p2;
-	} ITrigon;
 	const int trigons_max = 5;
 	ITrigon trigons[trigons_max];
 	int trigon_count = 0;
@@ -383,11 +381,11 @@ void draw_trigon(Renderer *r, Vec2 p0, Vec2 p1, Vec2 p2, uint32_t color) {
 		qsort(index_angles, new_vertex_count, sizeof(IndexAngle), compare_angles);
 
 		for (int i = 0; i < new_vertex_count - 2; i++) {
-			trigons[trigon_count++] = (ITrigon){new_vertices[index_angles[0].index],
-				new_vertices[index_angles[i+1].index], new_vertices[index_angles[i+2].index]};
+			trigons[trigon_count++] = new_ITrigon(new_vertices[index_angles[0].index],
+				new_vertices[index_angles[i+1].index], new_vertices[index_angles[i+2].index]);
 		}
 	} else {
-		trigons[trigon_count++] = (ITrigon){new_vertices[0], new_vertices[1], new_vertices[2]};
+		trigons[trigon_count++] = new_ITrigon(new_vertices[0], new_vertices[1], new_vertices[2]);
 	}
 
 	// ---- draw all trigons ----
@@ -395,46 +393,46 @@ void draw_trigon(Renderer *r, Vec2 p0, Vec2 p1, Vec2 p2, uint32_t color) {
 		ITrigon trigon = trigons[i];
 
 		// early continue if trigon has no area
-		if ((trigon.p0.x == trigon.p1.x && trigon.p0.y == trigon.p1.y) ||
-				(trigon.p0.x == trigon.p2.x && trigon.p0.y == trigon.p2.y) ||
-				(trigon.p1.x == trigon.p2.x && trigon.p1.y == trigon.p2.y)) {
+		if ((trigon.a.x == trigon.b.x && trigon.a.y == trigon.b.y) ||
+				(trigon.a.x == trigon.c.x && trigon.a.y == trigon.c.y) ||
+				(trigon.b.x == trigon.c.x && trigon.b.y == trigon.c.y)) {
 			continue;
 		}
 
 		// if allready flat, draw right away
-		if (trigon.p0.x == trigon.p1.x ||
-				trigon.p0.x == trigon.p2.x ||
-				trigon.p1.x == trigon.p2.x ||
-				trigon.p0.y == trigon.p1.y ||
-				trigon.p0.y == trigon.p2.y ||
-				trigon.p1.y == trigon.p2.y) {
-			draw_lerp_line_trigon(&r->pixelbuffer, trigon.p0,
-														trigon.p1, trigon.p2, color);
+		if (trigon.a.x == trigon.b.x ||
+				trigon.a.x == trigon.c.x ||
+				trigon.b.x == trigon.c.x ||
+				trigon.a.y == trigon.b.y ||
+				trigon.a.y == trigon.c.y ||
+				trigon.b.y == trigon.c.y) {
+			draw_lerp_line_trigon(&r->pixelbuffer, trigon.a,
+														trigon.b, trigon.c, color);
 		} else {
 		// sort for smallest y coordinate
 			do {
-				IVec2 temp = trigon.p0;
-				if (temp.y > trigon.p1.y) {
-					trigon.p0 = trigon.p1;
-					trigon.p1 = temp;
+				IVec2 temp = trigon.a;
+				if (temp.y > trigon.b.y) {
+					trigon.a = trigon.b;
+					trigon.b = temp;
 				}
 
-				if (trigon.p2.y < trigon.p1.y) {
-					temp = trigon.p1;
-					trigon.p1 = trigon.p2;
-					trigon.p2 = temp;
+				if (trigon.c.y < trigon.b.y) {
+					temp = trigon.b;
+					trigon.b = trigon.c;
+					trigon.c = temp;
 				}
-			} while (trigon.p0.y > trigon.p1.y || trigon.p1.y > trigon.p2.y);
+			} while (trigon.a.y > trigon.b.y || trigon.b.y > trigon.c.y);
 
 			// split horizontally, draw both splits
-			float k = (float)(trigon.p1.y - trigon.p0.y) /
-								(trigon.p2.y - trigon.p0.y);
-			IVec2 p3 = {(int)(round(trigon.p0.x + k * 
-								(trigon.p2.x - trigon.p0.x))), trigon.p1.y};
-			draw_lerp_line_trigon(&r->pixelbuffer, trigon.p0,
-														trigon.p1, p3, color);
-			draw_lerp_line_trigon(&r->pixelbuffer, trigon.p2,
-														trigon.p1, p3, color);
+			float k = (float)(trigon.b.y - trigon.a.y) /
+								(trigon.c.y - trigon.a.y);
+			IVec2 p3 = {(int)(round(trigon.a.x + k * 
+								(trigon.c.x - trigon.a.x))), trigon.b.y};
+			draw_lerp_line_trigon(&r->pixelbuffer, trigon.a,
+														trigon.b, p3, color);
+			draw_lerp_line_trigon(&r->pixelbuffer, trigon.c,
+														trigon.b, p3, color);
 		}
 	}
 }

@@ -51,8 +51,8 @@ bool app_init(App* app, int width, int height) {
 	renderer_clear(&app->my_renderer->pixelbuffer, 0xFF000000);
 
 	// --- lua ---
-	// app->state.L = luaL_newstate();
-	// luaL_openlibs(app->state.L);
+	app->state.L = luaL_newstate();
+	luaL_openlibs(app->state.L);
 
   return true;
 }
@@ -82,7 +82,7 @@ void query_input(State* state) {
 	set_state(&state->input.mouse_mid, mouse_flags & SDL_BUTTON_MMASK);
 	set_state(&state->input.mouse_right, mouse_flags & SDL_BUTTON_RMASK);
 
-	const bool* key_states = SDL_GetKeyboardState(nullptr);
+	const bool* key_states = SDL_GetKeyboardState(NULL);
 	set_state(&state->input.shift, key_states[SDL_SCANCODE_LSHIFT]);
 	set_state(&state->input.ctrl, key_states[SDL_SCANCODE_LCTRL]);
 	set_state(&state->input.left, key_states[SDL_SCANCODE_LEFT]);

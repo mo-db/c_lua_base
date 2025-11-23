@@ -1,9 +1,14 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include <lua.h>
+#include <luajit-2.1/lua.h>
+#include <luajit-2.1/lauxlib.h>
+#include <luajit-2.1/lualib.h>
+#include <luajit-2.1/luajit.h>
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <math.h>
 
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
@@ -19,4 +24,6 @@
 		exit(EXIT_FAILURE);\
 	} while (0)
 
+
+bool check_lua(lua_State *L, int result);
 bool core_epsilon_equal(double x, double y);
