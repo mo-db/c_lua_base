@@ -44,6 +44,11 @@ typedef struct State {
 	Video video;
 	Input input;
 	lua_State *L;
+
+	char text[1024];
+	bool text_input_complete;
+
+
 } State;
 
 // big structure that has access to everything
@@ -52,6 +57,7 @@ typedef struct App {
 	SDL_Renderer* renderer;
 	SDL_Texture* window_texture;
 	Renderer* my_renderer;
+
 
 	int pixel_density;
 	int width;
@@ -64,10 +70,13 @@ typedef struct App {
 bool app_init(App* app, int width, int height);
 
 // run every frame
-void process_events(State* state);
+void process_events(App* app);
 
 // run every frame
 void query_input(State* state);
 
 // update the render viewport using input
 void update_viewport(State* state, Viewport* viewport);
+
+// lua
+void update_lua_State(State* state);

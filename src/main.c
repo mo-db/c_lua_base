@@ -10,45 +10,37 @@
 int main() {
 	App app = {};
 	app_init(&app, W, H);
-
-	
 	lua_State *L = app.state.L;
 	if (!check_lua(L, luaL_dofile(L, "scripts/test.lua"))){
 		EXIT();
 	}
 
+	// --- foo setup ---
 	Trigon trigons[N_TRIGONS];
-
 	for (int i = 0; i < N_TRIGONS; i++) {
+		float ran = SDL_randf() * 500;
 		for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
-			trigons[i].v[j] = (Vec2){(SDL_randf()) * 100 * i,
-				(SDL_randf()) * 100 * i};
+			trigons[i].v[j] = (Vec2){(-SDL_randf() + 0.5) * ran * i,
+				(-SDL_randf() + 0.5) * ran * i};
 		}
 	}
-
 	
 	while (!app.state.context.quit) {
-		process_events(&app.state);
+		process_events(&app);
 		query_input(&app.state);
 		update_viewport(&app.state, &app.my_renderer->viewport);
+		update_lua_State(&app.state);
 		SDL_SetRenderDrawColor(app.renderer, 0, 0, 0, 255);
 		SDL_RenderClear(app.renderer);
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
-		// if (became_true(app.state.input.shift)) {
-		// 	L = luaL_newstate();
-		// 	luaL_openlibs(L); // adds basic libs to VM
-		// 	if (!check_lua(L, luaL_dofile(L, "scripts/test.lua"))){
-		// 		EXIT();
-		// 	}
-		// }
+		printf("input: %s\n", app.state.text);
 
-
-
-		uint64_t start = SDL_GetPerformanceCounter();
-		foo(&app, trigons);
-		uint64_t end = SDL_GetPerformanceCounter();
-		uint64_t count = SDL_GetPerformanceFrequency();
+		// --- foo ---
+		// uint64_t start = SDL_GetPerformanceCounter();
+		// foo(&app, trigons);
+		// uint64_t end = SDL_GetPerformanceCounter();
+		// uint64_t count = SDL_GetPerformanceFrequency();
 		// printf("elapsed: %f\n", ((double)(end-start)/count) * 1000);
 
 		SDL_UpdateTexture(app.window_texture, NULL, app.my_renderer->pixelbuffer.pixels,

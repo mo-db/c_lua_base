@@ -58,14 +58,24 @@ bool app_init(App* app, int width, int height) {
 }
 
 
-void process_events(State* state) {
-  SDL_Event event;
-  while (SDL_PollEvent(&event)) {
-    switch (event.type) {
+void process_events(App* app) {
+  SDL_Event e;
+  while (SDL_PollEvent(&e)) {
+    switch (e.type) {
     case SDL_EVENT_QUIT:
-       state->context.quit = true;
+       app->state.context.quit = true;
       break;
-
+		case SDL_EVENT_TEXT_INPUT:
+      	SDL_strlcat(app->state.text, e.text.text, sizeof(app->state.text));
+				break;
+		case SDL_EVENT_KEY_DOWN:
+				if (e.key.key == SDLK_ESCAPE || e.key.key == SDLK_RETURN) {
+						SDL_StopTextInput(app->window);
+						app->state.text_input_complete = true;
+				} else if (e.key.key == SDLK_I) {
+						SDL_StartTextInput(app->window);
+						app->state.text_input_complete = false;
+				}
 		default: break;
 		}
 	}
@@ -103,5 +113,16 @@ void update_viewport(State* state, Viewport* viewport) {
 	}
 	else if (became_true(state->input.down)) {
 		viewport->scale *= 1.25;
+	}
+}
+
+void update_lua_State(State* state) {
+	if (became_true(state->input.shift)) {
+		state->L = luaL_newstate();
+		luaL_openlibs(state->L);
+		if (check_lua(state->L, luaL_dofile(state->L, "scripts/test.lua"))){
+		} else {
+			EXIT();
+		}
 	}
 }

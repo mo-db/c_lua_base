@@ -25,7 +25,7 @@ function MV(n_trigons, tptr)
   local t = ffi.cast("Trigon*", tptr)
   local n = tonumber(n_trigons) - 1
 
-  local test = 0
+  local test = 0.001
 
 
   for i=0, n, 1 do
