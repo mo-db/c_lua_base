@@ -21,8 +21,8 @@ int main() {
 
 	for (int i = 0; i < N_TRIGONS; i++) {
 		for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
-			trigons[i].v[j] = (Vec2){(SDL_randf()) * 10 * i,
-				(SDL_randf()) * 10 * i};
+			trigons[i].v[j] = (Vec2){(SDL_randf()) * 100 * i,
+				(SDL_randf()) * 100 * i};
 		}
 	}
 
