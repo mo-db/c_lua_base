@@ -3,6 +3,7 @@
 #include "graphics.h"
 #include "render.h"
 #include "foo.h"
+#include "regex.h"
 
 #define W 640
 #define H 480
@@ -12,6 +13,12 @@ int main() {
 	app_init(&app, W, H);
 
 	app.state.L = core_lua_dofile("scripts/gramma_def.lua");
+
+	char* pattern = "a*b";
+	char* subject = "ccccaxxbccccabcaxbcccc";
+
+	regex_match(pattern, subject);
+	return 0;
 
 
 	// --- foo setup ---

@@ -5,11 +5,15 @@
 #include <luajit-2.1/lauxlib.h>
 #include <luajit-2.1/lualib.h>
 #include <luajit-2.1/luajit.h>
+#include <tree_sitter/api.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <math.h>
+#include <string.h>
 
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
 #define MAX(a, b) ((a) < (b) ? (b) : (a))

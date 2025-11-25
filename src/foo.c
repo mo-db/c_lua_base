@@ -55,6 +55,11 @@ void bar(App* app) {
 			EXIT();
 		}
 	}
+}
 
-
+void get_tokens() {
+	char symbol[0xF-1];
+	char condition[0xFF-1];
+	char context[0xFF-1];
+	char replacement[0xFFF-1];
 }
