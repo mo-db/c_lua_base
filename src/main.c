@@ -6,6 +6,7 @@
 #include "regex.h"
 
 #include "coroutines_impl.h"
+#include "coroutines_spec.h"
 
 #define W 640
 #define H 480
@@ -14,7 +15,9 @@ int main() {
 	App app = {};
 	app_init(&app, W, H);
 
-	app.state.L = core_lua_dofile("scripts/gramma_def.lua");
+	// lua_register(app.state.L, "lua_create_level", wrap_lua_create_level);
+
+	app.state.L = reload_lua();
 
 	// char* pattern = "a*b";
 	// char* subject = "ccccaxxbccccabcaxbcccc";
@@ -22,19 +25,17 @@ int main() {
 	// regex_match(pattern, subject);
 
 	co_init(&app);
-	co_update(&app);
-	return 0;
 
 
 	// --- foo setup ---
-	Trigon trigons[N_TRIGONS];
-	for (int i = 0; i < N_TRIGONS; i++) {
-		float ran = SDL_randf() * 500;
-		for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
-			trigons[i].v[j] = (Vec2){(-SDL_randf() + 0.5) * ran * i,
-				(-SDL_randf() + 0.5) * ran * i};
-		}
-	}
+	// Trigon trigons[N_TRIGONS];
+	// for (int i = 0; i < N_TRIGONS; i++) {
+	// 	float ran = SDL_randf() * 500;
+	// 	for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
+	// 		trigons[i].v[j] = (Vec2){(-SDL_randf() + 0.5) * ran * i,
+	// 			(-SDL_randf() + 0.5) * ran * i};
+	// 	}
+	// }
 	
 	while (!app.state.context.quit) {
 		process_events(&app);
@@ -45,7 +46,10 @@ int main() {
 		SDL_RenderClear(app.renderer);
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
-		bar(&app);
+
+		co_update(&app);
+
+		// bar(&app);
 
 		// printf("input: %s\n", app.state.text);
 
@@ -63,3 +67,4 @@ int main() {
 	}
 	return 0;
 }
+

@@ -1,81 +1,76 @@
 #include "coroutines_spec.h"
 #include "coroutines_impl.h"
 
+void lua_create_level(CoState* co, int width, int height) {
+	co->level.width = width;
+	co->level.height = height;
+}
+
+int wrap_lua_create_level(lua_State* L) {
+	CoState* co = (CoState*)lua_touserdata(L, 1);
+	co->level.width = lua_tointeger(L,2);
+	co->level.height = lua_tointeger(L,3);
+	printf("level: %d, %d\n", co->level.width, co->level.height);
+  lua_pushnumber(L, 8888);
+	return 1;
+}
+
+
+int create_dynamic_object(CoState* co, Vec2 position) {
+	DynObject dyn = {};
+	dyn.id = co->dyn_id_counter++;
+	dyn.position = position;
+	dyn.color = 0xFFFFFFFF;
+	ArrList_push_back(&co->dyn_objects, &dyn);
+	return dyn.id;
+}
+
+int lua_create_dynamic_object(lua_State* L) {
+	CoState* co = (CoState*)lua_touserdata(L, 1);
+	Vec2 position = {};
+	position.x = lua_tonumber(L, 2);
+	position.y = lua_tonumber(L, 3);
+	int id = create_dynamic_object(co, position);
+	lua_pushnumber(L, id);
+	return true;
+}
+
 
 void co_init(App* app) {
-	ArrList(Test) test_list1 = {};
-	// test_list1.internal.cap = 16;
-	// test_list1.internal.data = calloc(16, sizeof(Test));
+	CoState* co = &(app->state.co);
+	lua_State* L = app->state.L;
+	ArrList_alloc(&co->manips, MAX_MANIPS);
+	ArrList_alloc(&co->dyn_objects, MAX_DYN_OBJECTS);
+	printf("cap: %ld\n", ARR_LIST_CAP(co->dyn_objects));
 
-
-
-
-	// ArrList(Test) test_list2 = {};
-	bool result = ArrList_alloc(&test_list1, 1024);
-	if (result) {
-		Test t = (Test){3, 67};
-		ArrList_push_back(&test_list1, &t);
-		ArrList_push_back(&test_list1, &((Test){9, 44}));
-
-		for (int i = 0; i < ALIST_LEN(test_list1); i++) {
-			if (ArrList_at(&test_list1, i)->id == 9) {
-				ArrList_remove(&test_list1, i);
-			}
-		}
-
-		for (int i = 0; i < ALIST_LEN(test_list1); i++) {
-			printf("x,y: %d, %d\n", ArrList_at(&test_list1, i)->id,
-										ArrList_at(&test_list1, i)->val);
+	lua_getglobal(L, "load_level");
+	if (lua_isfunction(L, -1)) {
+		lua_pushlightuserdata(L, co);
+		lua_pushnumber(L, 1);
+		if (core_lua_check(L, lua_pcall(L, 2, 1, 0))) {
+			printf("success\n");
+		} else {
+			printf("huh?\n");
 		}
 	}
-
-
-
-
-
-	//
-	// Test t = (Test){3, 99};
-	// ArrList_push_back(&test_list1, &t);
-	// ArrList_push_back(&test_list1, &((Test){9, 44}));
-	//
-	// printf("Len: %ld\n", ALIST_LEN(test_list1));
-	// for (int i = 0; i < ALIST_LEN(test_list1); i++) {
-	// 	printf("x,y: %f, %f\n", ArrList_at(&test_list1, i)->position.x,
-	// 								ArrList_at(&test_list1, i)->position.x);
-	// }
-
-	// bool result = ArrList_remove(&test_list1, 1);
-	// if (result) { printf("removed\n"); }
-
-
-	// ArrList_at(&test_list1, 5)->val = 999;
-	// for (int i = 0; i < 16; i++) {
-	// 	ArrList_at(&test_list1, i)->id = i;
-	// }
-
-
-
-
-	// ArrList(Test)* test_list = new_ArrList(1024, sizeof(Test));
-	// ArrList_at(test_list, 0)->a = 5;
-	// app->state.co.manips = new_ArrList(1024, sizeof(Manipulator));
-	// *ArrList_at(app->state.co.manips, 0) = (Manipulator){ MOVE1, 0, false };
 }
 
 void co_update(App* app) {
 	CoState* co = &(app->state.co);
-	// printf("x coord: %f ",ArrList_at(co->dynamic_objects, 0)->position.x);
+	lua_State* L = app->state.L;
 
-	// // run all manipulators
-	// for (int i = 0; i < co->manips_count; i++) {
-	// 	Manipulator* manip = &(co->manips[i]);
-	// 	manip_funcs[manip->manip_type](
-	// 			&(co->dynamic_objects[manip->object_id]), 0.0f);
+
+
+	// for (int i = 0; i < ARR_LIST_CAP(co->dyn_objects); i++) {
+	// 	float rand1 = SDL_randf();
+	// 	float rand2 = SDL_randf();
+	// 	ArrList_at(&co->dyn_objects, i)->position.x = i*10*rand1;
+	// 	ArrList_at(&co->dyn_objects, i)->position.y = i*10*rand2;
 	// }
-	//
-	// // draw dynamic objects
-	// for (int i = 0; i < app->state.co.dynamic_objects_count; i++) {
-	// 	Vec2 pos = app->state.co.dynamic_objects[i].position;
-	// 	draw_rect(app->my_renderer, pos, add_Vec2(pos, (Vec2){5,5}), 0xFFFFFFFF);
-	// }
+
+	// draw dynamic objects
+	for (int i = 0; i < ARR_LIST_LEN(co->dyn_objects); i++) {
+		Vec2 pos = ArrList_at(&co->dyn_objects, i)->position;
+		draw_rect(app->my_renderer, pos, add_Vec2(pos, (Vec2){50,50}), 0xFFFFFFFF);
+	}
 }

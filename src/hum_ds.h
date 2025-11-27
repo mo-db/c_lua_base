@@ -27,8 +27,8 @@ bool _ArrList_alloc(ArrListInternal* arr_list, int cap, size_t item_size);
 									cap, \
 								 	sizeof(*(arr_list)->payload)))
 
-#define ALIST_LEN(alist_2) (alist_2).internal.len
-#define ALIST_CAP(alist_2) (alist_2).internal.cap
+#define ARR_LIST_LEN(alist_2) (alist_2).internal.len
+#define ARR_LIST_CAP(alist_2) (alist_2).internal.cap
 
 // the ternary is used for type checking
 bool _ArrList_push_back(ArrListInternal* arr_list, void* item, size_t item_size);

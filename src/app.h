@@ -82,4 +82,5 @@ void query_input(State* state);
 void update_viewport(State* state, Viewport* viewport);
 
 // lua
-void update_lua_State(State* state);
+// void update_lua_State(State* state);
+lua_State* reload_lua();

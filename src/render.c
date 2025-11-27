@@ -59,32 +59,39 @@ Vec2 screen_to_world(Viewport *viewport, const Vec2 point_screen) {
   return point_world;
 }
 
-void draw_rect(Renderer* r, Vec2 p1, Vec2 p2, uint32_t color) {
-	p1 = world_to_screen(&r->viewport, p1);
-	p2 = world_to_screen(&r->viewport, p2);
+void draw_rect(Renderer* r, Vec2 start, Vec2 end, uint32_t color) {
+	IVec2 p0 = get_IVec2(world_to_screen(&r->viewport, start));
+	IVec2 p1 = get_IVec2(world_to_screen(&r->viewport, end));
 
 	int width = r->pixelbuffer.width;
 	int height = r->pixelbuffer.height;
 
-	int x1 = round(MAX(MIN(p1.x, p2.x), 0.f));
-	int x2 = round(MIN(MAX(p1.x, p2.x), (float)width));
-	int y1 = round(MAX(MIN(p1.y, p2.y), 0.f));
-	int y2 = round(MIN(MAX(p1.y, p2.y), (float)height));
+	int x_min_raw = round(MIN(p0.x, p1.x));
+	int x_max_raw = round(MAX(p0.x, p1.x));
+	int y_min_raw = round(MIN(p0.y, p1.y));
+	int y_max_raw = round(MAX(p0.y, p1.y));
 
-	if (x1 > r->pixelbuffer.width || x2 < 0.0f ||
-			y1 > r->pixelbuffer.height || y2 < 0.0f ) {
+	int x_min = MIN(MAX(x_min_raw, 0.0), width);
+	int x_max = MIN(MAX(x_max_raw, 0.0), width);
+	int y_min = MIN(MAX(y_min_raw, 0.0), height);
+	int y_max = MIN(MAX(y_max_raw, 0.0), height);
+
+	int dx = x_max - x_min;
+	int dy = y_max - y_min;
+
+	if (dx == 0 || dy == 0) {
 		return;
 	}
 
-	int pixel_count = (x2 - x1) * (y2 - y1);
-	IVec2 pixels[pixel_count];
-	int iter = 0;
-	for (int i = y1; i < y2; i++) {
-		for (int j = x1; j < x2; j++) {
-			pixels[iter++] = (IVec2){j, i};
+	IVec2 pixels[width];
+	int pixel_count;
+	for (int i = y_min; i < y_max; i++) {
+		pixel_count = 0;
+		for (int j = x_min; j < x_max; j++) {
+			pixels[pixel_count++] = (IVec2){j, i};
 		}
+		color_pixels(&r->pixelbuffer, pixels, pixel_count, color);
 	}
-	color_pixels(&r->pixelbuffer, pixels, pixel_count, color);
 }
 
 // floating point line algorithm

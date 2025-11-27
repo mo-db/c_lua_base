@@ -32,7 +32,6 @@
 
 
 bool core_lua_check(lua_State *L, int result);
-lua_State* core_lua_dofile(const char* file_name);
 bool core_epsilon_equal(double x, double y);
 
 

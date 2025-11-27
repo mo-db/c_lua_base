@@ -116,8 +116,34 @@ void update_viewport(State* state, Viewport* viewport) {
 	}
 }
 
-void update_lua_State(State* state) {
-	if (became_true(state->input.shift)) {
-		state->L = core_lua_dofile("scripts/test.lua");
+// void update_lua_State(State* state) {
+// 	if (became_true(state->input.shift)) {
+// 		state->L = core_lua_dofile("scripts/test.lua");
+// 	}
+// }
+
+
+lua_State* reload_lua() {
+	lua_State* L = luaL_newstate();
+	luaL_openlibs(L);
+
+	char* scripts[] = { "scripts/gramma_def.lua", "scripts/coroutines.lua" };
+	size_t n_files = sizeof(scripts) / sizeof(char*);
+
+	lua_pushcfunction(L, wrap_lua_create_level);
+	lua_setglobal(L, "wrap_lua_create_level");
+
+	lua_pushcfunction(L, lua_create_dynamic_object);
+	lua_setglobal(L, "lua_create_dynamic_object");
+
+	for (size_t i = 0; i < n_files; i++) {
+		printf("script: %s\n", scripts[i]);
+		if (core_lua_check(L, luaL_dofile(L, scripts[i]))){
+			printf("FUU\n");
+		} else {
+			printf("BUU\n");
+			EXIT();
+		}
 	}
+	return L;
 }

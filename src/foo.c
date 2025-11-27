@@ -25,7 +25,7 @@ void foo(App* app, Trigon* trigons) {
 
 void bar(App* app) {
 	if (became_true(app->state.input.shift)) {
-		app->state.L = core_lua_dofile("scripts/gramma_def.lua");
+		app->state.L = reload_lua();
 	}
 	lua_State *L = app->state.L;
 
