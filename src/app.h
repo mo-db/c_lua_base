@@ -38,6 +38,11 @@ typedef struct Input {
 	GenericState right;
 	GenericState up;
 	GenericState down;
+	GenericState w;
+	GenericState s;
+	GenericState a;
+	GenericState d;
+
 	Vec2 mouse;
 } Input;
 

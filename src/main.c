@@ -37,6 +37,11 @@ int main() {
 	// 	}
 	// }
 	
+	uint64_t now = 0;
+	uint64_t last = 0;
+	uint64_t count = 0;
+	double elapsed_time = 0;
+
 	while (!app.state.context.quit) {
 		process_events(&app);
 		query_input(&app.state);
@@ -46,8 +51,19 @@ int main() {
 		SDL_RenderClear(app.renderer);
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
+		last = now;
+		now = SDL_GetPerformanceCounter();
+		count = SDL_GetPerformanceFrequency();
+		elapsed_time = ((double)(now-last)/count) * 1000;
 
-		co_update(&app);
+		co_update(&app, elapsed_time);
+
+
+
+		// printf("elapsed: %f\n", ((double)(now-last)/count) * 1000);
+
+
+
 
 		// bar(&app);
 

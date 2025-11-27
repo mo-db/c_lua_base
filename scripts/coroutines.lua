@@ -8,6 +8,7 @@ function load_level(co, level)
   result = wrap_lua_create_level(co, size.width, size.height)
   print("[Lua] Called multiply_2_numbers(..) and the result is:" .. tostring(result))
 
-  some_object = lua_create_dynamic_object(co, 500, 100)
+  some_object_id = lua_create_dynamic_object(co, 500, 100)
+  lua_assign_player_control(co, some_object_id)
 
  end

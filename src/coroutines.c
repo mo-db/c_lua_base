@@ -32,8 +32,20 @@ int lua_create_dynamic_object(lua_State* L) {
 	position.y = lua_tonumber(L, 3);
 	int id = create_dynamic_object(co, position);
 	lua_pushnumber(L, id);
-	return true;
+	return 1;
 }
+
+void assign_player_control(CoState* co, int dyn_id) {
+	co->player_control_object = dyn_id;
+}
+
+int lua_assign_player_control(lua_State* L) {
+	CoState* co = (CoState*)lua_touserdata(L, 1);
+	int dyn_id = lua_tonumber(L, 2);
+	assign_player_control(co, dyn_id);
+	return 0;
+}
+
 
 
 void co_init(App* app) {
@@ -41,6 +53,7 @@ void co_init(App* app) {
 	lua_State* L = app->state.L;
 	ArrList_alloc(&co->manips, MAX_MANIPS);
 	ArrList_alloc(&co->dyn_objects, MAX_DYN_OBJECTS);
+	co->player_control_object = -1;
 	printf("cap: %ld\n", ARR_LIST_CAP(co->dyn_objects));
 
 	lua_getglobal(L, "load_level");
@@ -55,10 +68,29 @@ void co_init(App* app) {
 	}
 }
 
-void co_update(App* app) {
+void co_update(App* app, double elapsed_time) {
 	CoState* co = &(app->state.co);
 	lua_State* L = app->state.L;
 
+	// printf("elapsed: %f\n", elapsed_time);
+
+	printf("control object id: %d\n", co->player_control_object);
+	// player control for object
+	if (co->player_control_object >= 0) {
+		DynObject* player_object =
+			ArrList_at(&co->dyn_objects, co->player_control_object);	
+		Vec2 vel = {};
+		if (get_state(app->state.input.w)) { vel = add_Vec2(vel, (Vec2){0, -0.2}); }
+		if (get_state(app->state.input.s)) { vel = add_Vec2(vel, (Vec2){0, 0.2}); }
+		if (get_state(app->state.input.a)) { vel = add_Vec2(vel, (Vec2){-0.2, 0}); }
+		if (get_state(app->state.input.d)) { vel = add_Vec2(vel, (Vec2){0.2, 0}); }
+
+		printf("vel %f, %f\n", vel.x, vel.y);
+
+		player_object->position =
+			add_Vec2(player_object->position, mul_Vec2(vel, elapsed_time));
+			// add_Vec2(player_object->position, vel);
+	}
 
 
 	// for (int i = 0; i < ARR_LIST_CAP(co->dyn_objects); i++) {

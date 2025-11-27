@@ -99,7 +99,13 @@ void query_input(State* state) {
 	set_state(&state->input.right, key_states[SDL_SCANCODE_RIGHT]);
 	set_state(&state->input.up, key_states[SDL_SCANCODE_UP]);
 	set_state(&state->input.down, key_states[SDL_SCANCODE_DOWN]);
+
+	set_state(&state->input.w, key_states[SDL_SCANCODE_W]);
+	set_state(&state->input.s, key_states[SDL_SCANCODE_S]);
+	set_state(&state->input.a, key_states[SDL_SCANCODE_A]);
+	set_state(&state->input.d, key_states[SDL_SCANCODE_D]);
 }
+
 
 void update_viewport(State* state, Viewport* viewport) {
 	if (get_state(state->input.left)) {
@@ -135,6 +141,9 @@ lua_State* reload_lua() {
 
 	lua_pushcfunction(L, lua_create_dynamic_object);
 	lua_setglobal(L, "lua_create_dynamic_object");
+
+	lua_pushcfunction(L, lua_assign_player_control);
+	lua_setglobal(L, "lua_assign_player_control");
 
 	for (size_t i = 0; i < n_files; i++) {
 		printf("script: %s\n", scripts[i]);

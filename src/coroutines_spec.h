@@ -4,6 +4,7 @@
 
 int wrap_lua_create_level(lua_State* L);
 int lua_create_dynamic_object(lua_State* L);
+int lua_assign_player_control(lua_State* L);
 
 typedef struct {
 	int id;
@@ -34,6 +35,7 @@ typedef struct {
 typedef struct {
 	ArrList(DynObject) dyn_objects;
 	int dyn_id_counter;
+	int player_control_object;
 	ArrList(Manip) manips;
 	int manips_id_counter;
 	Level level;
