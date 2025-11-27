@@ -5,6 +5,8 @@
 #include "foo.h"
 #include "regex.h"
 
+#include "coroutines_impl.h"
+
 #define W 640
 #define H 480
 
@@ -14,10 +16,13 @@ int main() {
 
 	app.state.L = core_lua_dofile("scripts/gramma_def.lua");
 
-	char* pattern = "a*b";
-	char* subject = "ccccaxxbccccabcaxbcccc";
+	// char* pattern = "a*b";
+	// char* subject = "ccccaxxbccccabcaxbcccc";
 
-	regex_match(pattern, subject);
+	// regex_match(pattern, subject);
+
+	co_init(&app);
+	co_update(&app);
 	return 0;
 
 

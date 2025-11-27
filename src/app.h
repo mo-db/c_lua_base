@@ -5,6 +5,8 @@
 #include "graphics.h"
 #include "render.h"
 
+#include "coroutines_spec.h"
+
 // a generic state, state(bool state) eneds to be called every frame
 typedef struct GenericState {
   bool current_state;
@@ -44,6 +46,7 @@ typedef struct State {
 	Video video;
 	Input input;
 	lua_State *L;
+	CoState co;
 
 	char text[1024];
 	bool text_input_complete;
