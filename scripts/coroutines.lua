@@ -43,6 +43,8 @@ function load_level(co, level)
   dynamics[platform_id] = {behaviour = coroutine.create(dyn_behaviour1)}
   dynamics[platform_id1] = {behaviour = coroutine.create(dyn_behaviour1)}
   dynamics[platform_id2] = {behaviour = coroutine.create(dyn_behaviour1)}
+
+  -- TODO: ArrList remove error
   issue_next_task(co, platform_id)
   -- issue_next_task(co, platform_id1)
   -- issue_next_task(co, platform_id2)

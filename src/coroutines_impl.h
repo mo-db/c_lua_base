@@ -14,7 +14,4 @@
 void co_init(App* app);
 void co_update(App* app, double elapsed_time);
 
-void lua_create_level(CoState* co, int width, int height);
-
-
 // void co(App* app);
