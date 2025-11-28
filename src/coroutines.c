@@ -87,6 +87,7 @@ void move_object(CoState* co, int dyn_object_id, Vec2 pos, float run_time) {
 	new_manip.start_pos = dyn_object->position;
 	new_manip.target_pos = pos;
 	new_manip.run_time = run_time;
+	new_manip.manip_type = MOVE1;
 	ArrList_push_back(&co->new_manips, &new_manip);
 	printf("len: %ld\n", ARR_LIST_LEN(co->new_manips));
 }
