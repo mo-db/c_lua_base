@@ -5,6 +5,7 @@
 int wrap_lua_create_level(lua_State* L);
 int lua_create_dynamic_object(lua_State* L);
 int lua_assign_player_control(lua_State* L);
+int lua_move_object(lua_State* L);
 
 typedef struct {
 	int id;
@@ -21,8 +22,14 @@ typedef enum {
 } ManipType;
 
 typedef struct {
+  int id;
+	int dyn_object_id;
   ManipType manip_type;
-  int object_id;
+
+	Vec2 start_pos;
+	Vec2 target_pos;
+	float run_time;
+	float time_passed;
   bool done;
 } Manip;
 
@@ -37,6 +44,13 @@ typedef struct {
 	int dyn_id_counter;
 	int player_control_object;
 	ArrList(Manip) manips;
-	int manips_id_counter;
+	ArrList(Manip) new_manips;
+	int manip_id_counter;
 	Level level;
 } CoState;
+
+
+typedef bool (*ManipUpdateFunc)(CoState* co, Manip* m, float dt);
+bool update_manip_move1(CoState* co, Manip* m, float dt);
+bool update_manip_move2(CoState* co, Manip* m, float dt);
+

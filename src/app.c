@@ -145,6 +145,11 @@ lua_State* reload_lua() {
 	lua_pushcfunction(L, lua_assign_player_control);
 	lua_setglobal(L, "lua_assign_player_control");
 
+
+	lua_pushcfunction(L, lua_move_object);
+	lua_setglobal(L, "lua_move_object");
+
+
 	for (size_t i = 0; i < n_files; i++) {
 		printf("script: %s\n", scripts[i]);
 		if (core_lua_check(L, luaL_dofile(L, scripts[i]))){
