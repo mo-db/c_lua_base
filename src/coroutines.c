@@ -1,5 +1,4 @@
-#include "coroutines_spec.h"
-#include "coroutines_impl.h"
+#include "coroutines.h"
 
 ManipUpdateFunc manip_funcs[MANIP_TYPE_COUNT] = { update_manip_move1,
 																									update_manip_move2 };
@@ -78,6 +77,45 @@ bool update_manip_move1(CoState* co, Manip* manip, float frame_dt) {
 	return false;
 }
 
+bool update_manips(CoState* co, lua_State* L, float elapsed_time) {
+
+	// --- add new manips to active manips
+	for (int i = 0; i < ARR_LIST_LEN(co->new_manips); i++) {
+		Manip* new_manip = ArrList_at(&co->new_manips, i);
+		ArrList_push_back(&co->manips, new_manip);
+	}
+	ARR_LIST_LEN(co->new_manips) = 0;
+
+	// --- run update functions of active manips ---
+	for (int i = 0; i < ARR_LIST_LEN(co->manips); i++) {
+		Manip* manip = ArrList_at(&co->manips, i);
+		DynObject* dyn = get_dynamic_object_by_id(co, manip->dyn_object_id);
+
+		bool done = manip_funcs[manip->manip_type](co, manip, elapsed_time);
+		if (done) {
+			lua_getglobal(L, "issue_next_task");
+			if(lua_isfunction(L, -1)) {
+				lua_pushlightuserdata(L, co);
+				lua_pushnumber(L, dyn->id);
+				if (core_lua_check(L, lua_pcall(L, 2, 1, 0))) {
+				} else {
+					EXIT();
+				}
+			}
+		}
+	}
+
+	// --- remove finished manips---
+	for (int i = 0; i < ARR_LIST_LEN(co->manips); i++) {
+		Manip* manip = ArrList_at(&co->manips, i);
+		if (manip->done) {
+			ArrList_remove(&co->manips, i);
+		}
+	}
+
+	return true;
+}
+
 // bad name, this actually does to many things, creates object
 void move_object(CoState* co, int dyn_object_id, Vec2 pos, float run_time) {
 	Manip new_manip = {};
@@ -101,104 +139,4 @@ int lua_move_object(lua_State* L) {
 	float run_time = lua_tonumber(L, 5);
 	move_object(co, dyn_id, pos, run_time);
 	return 0;
-}
-
-void co_init(App* app) {
-	CoState* co = &(app->state.co);
-	lua_State* L = app->state.L;
-	ArrList_alloc(&co->manips, MAX_MANIPS);
-	ArrList_alloc(&co->new_manips, MAX_MANIPS);
-	ArrList_alloc(&co->dyn_objects, MAX_DYN_OBJECTS);
-	co->player_control_object = -1;
-
-
-	printf("cap: %ld\n", ARR_LIST_CAP(co->dyn_objects));
-
-	lua_getglobal(L, "load_level");
-	if (lua_isfunction(L, -1)) {
-		lua_pushlightuserdata(L, co);
-		lua_pushnumber(L, 1);
-		if (core_lua_check(L, lua_pcall(L, 2, 1, 0))) {
-			printf("success\n");
-		} else {
-			printf("huh?\n");
-		}
-	}
-}
-
-void co_update(App* app, double elapsed_time) {
-	CoState* co = &(app->state.co);
-	lua_State* L = app->state.L;
-
-
-	printf("len new manips : %ld\n", ARR_LIST_LEN(co->new_manips));
-	printf("len manips     : %ld\n", ARR_LIST_LEN(co->manips));
-
-	for (int i = 0; i < ARR_LIST_LEN(co->new_manips); i++) {
-		Manip* new_manip = ArrList_at(&co->new_manips, i);
-		ArrList_push_back(&co->manips, new_manip);
-	}
-	ARR_LIST_LEN(co->new_manips) = 0;
-
-	// --- update manipulators ---
-	for (int i = 0; i < ARR_LIST_LEN(co->manips); i++) {
-		Manip* manip = ArrList_at(&co->manips, i);
-		DynObject* dyn = get_dynamic_object_by_id(co, manip->dyn_object_id);
-
-		bool done = manip_funcs[manip->manip_type](co, manip, elapsed_time);
-		if (done) {
-			lua_getglobal(L, "issue_next_task");
-			if(lua_isfunction(L, -1)) {
-				lua_pushlightuserdata(L, co);
-				lua_pushnumber(L, dyn->id);
-				if (core_lua_check(L, lua_pcall(L, 2, 1, 0))) {
-				} else {
-					EXIT();
-				}
-			}
-		}
-	}
-
-	for (int i = 0; i < ARR_LIST_LEN(co->manips); i++) {
-		Manip* manip = ArrList_at(&co->manips, i);
-		if (manip->done) {
-			ArrList_remove(&co->manips, i);
-		}
-	}
-
-
-
-	// printf("elapsed: %f\n", elapsed_time);
-
-	// printf("control object id: %d\n", co->player_control_object);
-	// player control for object
-	if (co->player_control_object >= 0) {
-
-		DynObject* player_object = get_dynamic_object_by_id(co, co->player_control_object);
-		Vec2 vel = {};
-		if (get_state(app->state.input.w)) { vel = add_Vec2(vel, (Vec2){0, -0.2}); }
-		if (get_state(app->state.input.s)) { vel = add_Vec2(vel, (Vec2){0, 0.2}); }
-		if (get_state(app->state.input.a)) { vel = add_Vec2(vel, (Vec2){-0.2, 0}); }
-		if (get_state(app->state.input.d)) { vel = add_Vec2(vel, (Vec2){0.2, 0}); }
-
-		// printf("vel %f, %f\n", vel.x, vel.y);
-
-		player_object->position =
-			add_Vec2(player_object->position, mul_Vec2(vel, elapsed_time));
-			// add_Vec2(player_object->position, vel);
-	}
-
-
-	// for (int i = 0; i < ARR_LIST_CAP(co->dyn_objects); i++) {
-	// 	float rand1 = SDL_randf();
-	// 	float rand2 = SDL_randf();
-	// 	ArrList_at(&co->dyn_objects, i)->position.x = i*10*rand1;
-	// 	ArrList_at(&co->dyn_objects, i)->position.y = i*10*rand2;
-	// }
-
-	// draw dynamic objects
-	for (int i = 0; i < ARR_LIST_LEN(co->dyn_objects); i++) {
-		Vec2 pos = ArrList_at(&co->dyn_objects, i)->position;
-		draw_rect(app->my_renderer, pos, add_Vec2(pos, (Vec2){50,50}), 0xFFFFFFFF);
-	}
 }

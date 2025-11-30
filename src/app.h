@@ -5,7 +5,7 @@
 #include "graphics.h"
 #include "render.h"
 
-#include "coroutines_spec.h"
+#include "coroutines.h"
 
 // a generic state, state(bool state) eneds to be called every frame
 typedef struct GenericState {

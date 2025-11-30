@@ -53,4 +53,6 @@ typedef struct {
 typedef bool (*ManipUpdateFunc)(CoState* co, Manip* m, float dt);
 bool update_manip_move1(CoState* co, Manip* m, float dt);
 bool update_manip_move2(CoState* co, Manip* m, float dt);
+bool update_manips(CoState* co, lua_State* L, float elapsed_time);
+DynObject* get_dynamic_object_by_id(CoState* co, int id);
 

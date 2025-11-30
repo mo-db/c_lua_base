@@ -5,9 +5,6 @@
 #include "foo.h"
 #include "regex.h"
 
-#include "coroutines_impl.h"
-#include "coroutines_spec.h"
-
 #define W 640
 #define H 480
 
@@ -23,6 +20,9 @@ int main() {
 	// char* subject = "ccccaxxbccccabcaxbcccc";
 
 	// regex_match(pattern, subject);
+
+	sparse_test(&app);
+	return 0;
 
 	co_init(&app);
 
