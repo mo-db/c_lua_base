@@ -64,7 +64,12 @@ void get_tokens() {
 	char replacement[0xFFF-1];
 }
 
-
+void _allign_test(size_t size, size_t allign) {
+	printf("allign: %ld\n", size);
+	printf("allign: %ld\n", allign);
+}
+#define allign_test(s_set) \
+    (_allign_test(sizeof(*(s_set)->payload), _Alignof(*(s_set)->payload)))
 
 void sparse_test(App* app) {
 	SSet(Blub) new_sset = {};	
@@ -72,6 +77,12 @@ void sparse_test(App* app) {
 	Blub b1 = { 5.0, 12.5 };
 	Blub b2 = { 99.0, 30 };
 	Blub b3 = { -700.25, 30.9 };
+
+	allign_test(&new_sset);
+
+	return;
+
+
 
 	uint32_t b1_id = SSet_push_back(&new_sset, &b1);
 	uint32_t b2_id = SSet_push_back(&new_sset, &b2);

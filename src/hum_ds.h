@@ -101,6 +101,7 @@ typedef struct {
 	int cap;
 	// unordered contigous data-block touples {sparse_index, item}
 	uint8_t* dense;
+	uint32_t* sparse_indices_of_dense;
 	// array of dense_indices, len of sparse: len + dead_count
 	uint32_t* sparse;
 	// removed id's
