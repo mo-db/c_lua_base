@@ -62,7 +62,9 @@ int _ArrList_find_id() {}
 
 // --- sparse set ---
 bool _SSet_alloc(SSetInternal* s_set, int cap, size_t item_size) {
-	s_set->dense = malloc(cap * (item_size + 4));
+	s_set->dense = malloc(cap * item_size);
+	if (!s_set->dense) { return false; }
+	s_set->sparse_indices_of_dense = malloc(cap * 4);
 	if (!s_set->dense) { return false; }
 	s_set->sparse = malloc(cap * 4);
 	if (!s_set->sparse) { return false; }
@@ -80,22 +82,21 @@ uint32_t _SSet_push_back(SSetInternal* s_set, void* item, size_t item_size) {
 	}
 
 	// calculate indices for sparse and dense of new item
-	uint32_t dense_index = s_set->count * (item_size + 4);
+	uint32_t dense_position = s_set->count;
+	uint32_t dense_index = dense_position  * item_size;
 	uint32_t sparse_index = 0;
 	if (s_set->dead_count > 0) {
-		// printf("SSet_push_back: pop dead sparse from stack\n");
 		sparse_index = s_set->dead_sparse_indices_stack[--s_set->dead_count];
 	} else {
-		sparse_index = s_set->count;
+		sparse_index = dense_position;
 	}
 
 	// push_back sparse_index|item to dense
-	uint8_t* dest = s_set->dense + dense_index;
-	memcpy(dest, &sparse_index, 4);
-	memcpy(dest + 4, item, item_size);
+	memcpy(s_set->dense + dense_index, item, item_size);
 
 	// set sparse at sparse_index to dense_index
 	s_set->sparse[sparse_index] = dense_index;
+	s_set->sparse_indices_of_dense[dense_position] = sparse_index;
 
 	s_set->count++;
 
@@ -107,7 +108,7 @@ void* _SSet_get(SSetInternal* s_set, int sparse_index) {
 	if (sparse_index >= s_set->count + s_set->dead_count) {
 		return NULL;
 	}
-	return s_set->dense + s_set->sparse[sparse_index] + 4;
+	return s_set->dense + s_set->sparse[sparse_index];
 }
 
 
@@ -115,31 +116,42 @@ void* _SSet_at(SSetInternal* s_set, int dense_position, int item_size) {
 	if (dense_position >= s_set->count) {
 		return NULL;
 	}
-	return s_set->dense + dense_position * (item_size + 4) + 4;
+	return s_set->dense + dense_position * item_size;
 }
 
 // SSet_get_id
-uint32_t _SSet_get_sparse_index(uint8_t* dense, uint32_t dense_index) {
-	return (uint32_t)(*(dense + dense_index));
+uint32_t _SSet_get_sparse_index(SSetInternal* s_set, uint32_t dense_position) {
+	return s_set->sparse_indices_of_dense[dense_position];
 }
 
 bool _SSet_remove(SSetInternal* s_set, int sparse_index, int item_size) {
-	if (sparse_index >= s_set->count) {
+	if (sparse_index >= s_set->count + s_set->dead_count) {
 		return NULL;
 	}
+
 	uint32_t dense_index = s_set->sparse[sparse_index];
-	uint32_t last_dense_index = (s_set->count - 1) * (item_size + 4);
+	uint32_t dense_position = 0;
+	if (dense_index != 0) {
+		dense_position = dense_index / item_size;
+	}
+
+	uint32_t last_dense_position = s_set->count - 1;
+	uint32_t last_dense_index = last_dense_position * item_size;
 
 	// check if item is last in dense
 	if (dense_index != last_dense_index) {
 		// replace the touple to remove with the last touple in dense
 		memcpy(s_set->dense + dense_index,
 					 s_set->dense + last_dense_index,
-					 item_size + 4);
+					 item_size);
+
+		s_set->sparse_indices_of_dense[dense_position] = 
+			s_set->sparse_indices_of_dense[last_dense_position];
+
 		// copier den sparse vom to remove item in den sparse vom letzten item
-		memcpy(s_set->sparse + _SSet_get_sparse_index(s_set->dense, last_dense_index),
+		memcpy(s_set->sparse + s_set->sparse_indices_of_dense[last_dense_position],
 						s_set->sparse + sparse_index,
-						4);
+						sizeof(uint32_t));
 		// push the dead sparse_index onto the stack
 		s_set->dead_sparse_indices_stack[s_set->dead_count++] = sparse_index;
 	}

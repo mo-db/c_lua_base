@@ -145,10 +145,10 @@ void* _SSet_at(SSetInternal* s_set, int dense_position, int item_size);
 																				dense_position, \
 																				sizeof(*(s_set)->payload)))
 // return id of item at dense_position
-uint32_t _SSet_get_sparse_index(uint8_t* dense, uint32_t dense_index);
+uint32_t _SSet_get_sparse_index(SSetInternal* s_set, uint32_t dense_position);
 #define SSet_id_at(s_set, dense_position) \
-	(_SSet_get_sparse_index((s_set)->internal.dense, \
-													(dense_position) * (sizeof(*(s_set)->payload) + 4)))
+	(_SSet_get_sparse_index(&(s_set)->internal, \
+													(dense_position)))
 
 bool _SSet_remove(SSetInternal* s_set, int sparse_index, int item_size);
 #define SSet_remove(s_set, id) \
