@@ -118,6 +118,10 @@ void* _SSet_at(SSetInternal* s_set, int dense_position, int item_size) {
 	return s_set->dense + dense_position * (item_size + 4) + 4;
 }
 
+// SSet_get_id
+uint32_t _SSet_get_sparse_index(uint8_t* dense, uint32_t dense_index) {
+	return (uint32_t)(*(dense + dense_index));
+}
 
 bool _SSet_remove(SSetInternal* s_set, int sparse_index, int item_size) {
 	if (sparse_index >= s_set->count) {
@@ -127,18 +131,15 @@ bool _SSet_remove(SSetInternal* s_set, int sparse_index, int item_size) {
 	uint32_t last_dense_index = (s_set->count - 1) * (item_size + 4);
 
 	// check if item is last in dense
-	if (dense_index == last_dense_index) {
-		// do nothing
-	} else {
+	if (dense_index != last_dense_index) {
 		// replace the touple to remove with the last touple in dense
 		memcpy(s_set->dense + dense_index,
 					 s_set->dense + last_dense_index,
 					 item_size + 4);
-		// replace sparse with the sparse of item in dense
-		memcpy(s_set->sparse + sparse_index,
-					 s_set->dense + last_dense_index,
-					 4);
-
+		// copier den sparse vom to remove item in den sparse vom letzten item
+		memcpy(s_set->sparse + _SSet_get_sparse_index(s_set->dense, last_dense_index),
+						s_set->sparse + sparse_index,
+						4);
 		// push the dead sparse_index onto the stack
 		s_set->dead_sparse_indices_stack[s_set->dead_count++] = sparse_index;
 	}

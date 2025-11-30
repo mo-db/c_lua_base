@@ -65,23 +65,20 @@ void get_tokens() {
 }
 
 void _allign_test(size_t size, size_t allign) {
-	printf("allign: %ld\n", size);
-	printf("allign: %ld\n", allign);
+	printf("size		: %ld\n", size);
+	printf("allign	: %ld\n", allign);
 }
 #define allign_test(s_set) \
     (_allign_test(sizeof(*(s_set)->payload), _Alignof(*(s_set)->payload)))
 
 void sparse_test(App* app) {
 	SSet(Blub) new_sset = {};	
-	if (!SSet_alloc(&new_sset, 32)) { EXIT(); }
-	Blub b1 = { 5.0, 12.5 };
-	Blub b2 = { 99.0, 30 };
-	Blub b3 = { -700.25, 30.9 };
-
 	allign_test(&new_sset);
 
-	return;
-
+	if (!SSet_alloc(&new_sset, 1024)) { EXIT(); }
+	Blub b1 = { 'a' };
+	Blub b2 = { 'b'};
+	Blub b3 = { 'c' };
 
 
 	uint32_t b1_id = SSet_push_back(&new_sset, &b1);
@@ -90,8 +87,10 @@ void sparse_test(App* app) {
 
 	for (int i = 0; i < S_SET_COUNT(new_sset); i++) {
 		Blub* result = SSet_at(&new_sset, i);
+		uint32_t id = SSet_id_at(&new_sset, i);
+		printf("id: %d\n", id);
 		if (result) {
-			printf("result[%d]: %f, %f\n", i, SSet_get(&new_sset, i)->x, SSet_get(&new_sset, i)->y);
+			printf("result[%d]: %c\n", i, result->c);
 		} else {
 			EXIT();
 		}
@@ -99,11 +98,12 @@ void sparse_test(App* app) {
 
 	if (!SSet_remove(&new_sset, b1_id)) { EXIT(); }
 
-
 	for (int i = 0; i < S_SET_COUNT(new_sset); i++) {
 		Blub* result = SSet_at(&new_sset, i);
+		uint32_t id = SSet_id_at(&new_sset, i);
+		printf("id: %d\n", id);
 		if (result) {
-			printf("result[%d]: %f, %f\n", i, SSet_get(&new_sset, i)->x, SSet_get(&new_sset, i)->y);
+			printf("result[%d]: %c\n", i, result->c);
 		} else {
 			EXIT();
 		}
