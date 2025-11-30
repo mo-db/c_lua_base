@@ -77,8 +77,11 @@ void sparse_test(App* app) {
 
 	if (!SSet_alloc(&new_sset, 1024)) { EXIT(); }
 	Blub b1 = { 'a' };
-	Blub b2 = { 'b'};
+	Blub b2 = { 'b' };
 	Blub b3 = { 'c' };
+	Blub b4 = { 'd' };
+	Blub b5 = { 'e' };
+	Blub b6 = { 'f' };
 
 
 	uint32_t b1_id = SSet_push_back(&new_sset, &b1);
@@ -108,9 +111,76 @@ void sparse_test(App* app) {
 			EXIT();
 		}
 	}
+	printf("## now add 3 more\n");	
+	uint32_t b4_id = SSet_push_back(&new_sset, &b4);
+	uint32_t b5_id = SSet_push_back(&new_sset, &b5);
+	uint32_t b6_id = SSet_push_back(&new_sset, &b6);
 
+	for (int i = 0; i < S_SET_COUNT(new_sset); i++) {
+		Blub* result = SSet_at(&new_sset, i);
+		uint32_t id = SSet_id_at(&new_sset, i);
+		printf("id: %d\n", id);
+		if (result) {
+			printf("result[%d]: %c\n", i, result->c);
+		} else {
+			EXIT();
+		}
+	}
+	printf("## now remove ##\n");
 
-	//
+	if (!SSet_remove(&new_sset, b3_id)) { EXIT(); }
+	if (!SSet_remove(&new_sset, b4_id)) { EXIT(); }
+
+	for (int i = 0; i < S_SET_COUNT(new_sset); i++) {
+		Blub* result = SSet_at(&new_sset, i);
+		uint32_t id = SSet_id_at(&new_sset, i);
+		printf("id: %d\n", id);
+		if (result) {
+			printf("result[%d]: %c\n", i, result->c);
+		} else {
+			EXIT();
+		}
+	}
+
+	printf("## clear##\n ");
+	SSet_clear(&new_sset);
+	// int count = S_SET_COUNT(new_sset);
+	// for (int i = 0; i < count; i++) {
+	// 	uint32_t id = SSet_id_at(&new_sset, i);
+	// 	printf("clear::: id: %d\n", id);
+	// 	SSet_remove(&new_sset, id);
+	// }
+
+	for (int i = 0; i < S_SET_COUNT(new_sset); i++) {
+		Blub* result = SSet_at(&new_sset, i);
+		uint32_t id = SSet_id_at(&new_sset, i);
+		printf("id: %d\n", id);
+		if (result) {
+			printf("result[%d]: %c\n", i, result->c);
+		} else {
+			EXIT();
+		}
+	}
+
+	printf("## realoc ##\n");
+	SSet_push_back(&new_sset, &b1);
+	SSet_push_back(&new_sset, &b2);
+	SSet_push_back(&new_sset, &b3);
+	SSet_push_back(&new_sset, &b4);
+	SSet_push_back(&new_sset, &b5);
+	SSet_push_back(&new_sset, &b6);
+
+	for (int i = 0; i < S_SET_COUNT(new_sset); i++) {
+		Blub* result = SSet_at(&new_sset, i);
+		uint32_t id = SSet_id_at(&new_sset, i);
+		printf("id: %d\n", id);
+		if (result) {
+			printf("result[%d]: %c\n", i, result->c);
+		} else {
+			EXIT();
+		}
+	}
+
 	// for (int i = 0; i < S_SET_CAP(new_sset); i++) {
 	// 	SSet_get(new_sset, i);
 	// }

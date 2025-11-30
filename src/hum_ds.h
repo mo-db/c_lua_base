@@ -59,55 +59,26 @@ void* _ArrList_at(ArrListInternal* arr_list, int index, size_t item_size);
 																				index,  \
 																				sizeof(*(arr_list)->payload)))
 
-union Ident {
-	uint8_t* object;
-	uint32_t id;
-};
-
-// --- Slotmap, unordered, stable pointers/ids, can remove/insert
-typedef struct {
-	ptrdiff_t len;
-	ptrdiff_t cap;
-	uint8_t* data;					// cap objects
-	uint8_t* dead_map;			// should instead be bitmap, marks indexes as dead
-	uint32_t* dead_stack;		// cap ids
-	uint32_t* alive_stack;	// cap ids
-} Slotmap;
-
-
-// --- Dynamic Segmented Slotmap ---
-typedef struct {
-	uint8_t* segments[26];
-	int used_segments;
-	uint32_t* dead_stack_segments[26];
-	int used_dead_stack_segments;
-} DSS;
-
-
 // --- Sparse Set ---
-typedef struct {
-	char c;
-} Blub;
-
-
 // sizeof(uint32_t) == 4
 // sparse_index <=> item_id
 // dense_inxes <=> dense_position * item_size * 4
 // dense_index == sparse[sparse_index]
 typedef struct {
 	// amount of active items in dense
-	int count;
+	int len;
 	// max items that dense can hold
 	int cap;
-	// unordered contigous data-block touples {sparse_index, item}
+	// unordered contigous data-block of item
 	uint8_t* dense;
-	uint32_t* sparse_indices_of_dense;
-	// array of dense_indices, len of sparse: len + dead_count
+	// corresponding sparse_index for each item in dense
+	uint32_t* dense_to_sparse_map;
+	// array of dense_indices, len of sparse: len + free_stack_len
 	uint32_t* sparse;
 	// removed id's
-	uint32_t* dead_sparse_indices_stack;
-	// count of removed id's
-	int dead_count;
+	uint32_t* sparse_free_stack;
+	// len of removed id's
+	int free_stack_len;
 } SSetInternal;
 
 #define SSet(type) \
@@ -116,21 +87,24 @@ typedef struct {
 		type* payload; \
 	}
 
-#define S_SET_COUNT(s_set) (s_set).internal.count
+#define S_SET_COUNT(s_set) (s_set).internal.len
 #define S_SET_CAP(s_set) (s_set).internal.cap
 
 bool _SSet_alloc(SSetInternal* s_set, int cap, size_t item_size);
 #define SSet_alloc(s_set, cap) \
 	(_SSet_alloc(&(s_set)->internal, \
 									cap, \
-								 	sizeof(*(s_set)->payload))) // why can i do? payload->null
+								 	sizeof(*(s_set)->payload))) // sizeof, typeof don't evaluate
+
+bool _SSet_clear(SSetInternal* s_set);
+#define SSet_clear(s_set) \
+	(_SSet_clear(&(s_set)->internal))
 
 uint32_t _SSet_push_back(SSetInternal* s_set, void* item, size_t item_size); 
 #define SSet_push_back(s_set, item) \
 	(_SSet_push_back(&(s_set)->internal, \
 									 (1 ? (item) : (s_set)->payload), \
 									 sizeof(*item))) // could i do like last func?
-
 
 // return unstable pointer to item corresponding to unique id
 void* _SSet_get(SSetInternal* s_set, int sparse_index);
