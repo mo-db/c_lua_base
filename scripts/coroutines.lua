@@ -46,7 +46,7 @@ function load_level(co, level)
 
   -- TODO: ArrList remove error
   issue_next_task(co, platform_id)
-  -- issue_next_task(co, platform_id1)
-  -- issue_next_task(co, platform_id2)
+  issue_next_task(co, platform_id1)
+  issue_next_task(co, platform_id2)
 
  end

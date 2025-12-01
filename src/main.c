@@ -21,9 +21,6 @@ int main() {
 
 	// regex_match(pattern, subject);
 
-	sparse_test(&app);
-	return 0;
-
 	co_init(&app);
 
 
@@ -37,12 +34,17 @@ int main() {
 	// 	}
 	// }
 	
-	uint64_t now = 0;
-	uint64_t last = 0;
+	uint64_t now = SDL_GetPerformanceCounter();
+	uint64_t last = SDL_GetPerformanceCounter();
 	uint64_t count = 0;
 	double elapsed_time = 0;
 
 	while (!app.state.context.quit) {
+		last = now;
+		now = SDL_GetPerformanceCounter();
+		count = SDL_GetPerformanceFrequency();
+		elapsed_time = ((double)(now-last)/count) * 1000;
+
 		process_events(&app);
 		query_input(&app.state);
 		update_viewport(&app.state, &app.my_renderer->viewport);
@@ -51,10 +53,7 @@ int main() {
 		SDL_RenderClear(app.renderer);
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
-		last = now;
-		now = SDL_GetPerformanceCounter();
-		count = SDL_GetPerformanceFrequency();
-		elapsed_time = ((double)(now-last)/count) * 1000;
+
 
 		co_update(&app, elapsed_time);
 

@@ -1,6 +1,6 @@
 #include "hum_ds.h"
 
-bool _ArrList_alloc(ArrListInternal* arr_list, int cap, size_t item_size) {
+bool _ArrList_alloc(ArrListInternal* arr_list, uint32_t cap, size_t item_size) {
 	arr_list->data = malloc(cap * item_size);
 	if (!arr_list->data) { return false; }
 	arr_list->len = 0;
@@ -60,111 +60,111 @@ void *_ArrList_at(ArrListInternal *arr_list, int index, size_t item_size) {
 // return id by serch
 int _ArrList_find_id() {}
 
-// --- sparse set ---
-bool _SSet_alloc(SSetInternal* s_set, int cap, size_t item_size) {
-	s_set->dense = malloc(cap * item_size);
-	if (!s_set->dense) { return false; }
+// --- *** sparse set *** ---
+bool _SSet_alloc(SSetInternal* sset, uint32_t cap, size_t item_size) {
+	sset->dense = malloc(cap * item_size);
+	if (!sset->dense) { return false; }
 
-	s_set->dense_to_sparse_map = malloc(cap * 4);
-	if (!s_set->dense_to_sparse_map) { return false; }
+	sset->dense_to_sparse_map = malloc(cap * sizeof(uint32_t));
+	if (!sset->dense_to_sparse_map) { return false; }
 
-	s_set->sparse = malloc(cap * 4);
-	if (!s_set->sparse) { return false; }
+	sset->sparse = malloc(cap * sizeof(uint32_t));
+	if (!sset->sparse) { return false; }
 
-	s_set->sparse_free_stack = malloc(cap * 4);
-	if (!s_set->sparse_free_stack) { return false; }
+	sset->sparse_free_stack = malloc(cap * sizeof(uint32_t));
+	if (!sset->sparse_free_stack) { return false; }
 
-	s_set->len = 0;
-	s_set->cap = cap;
+	sset->len = 0;
+	sset->cap = cap;
 	return true;
 }
 
-bool _SSet_clear(SSetInternal* s_set) {
-	s_set->len = 0;
-	s_set->free_stack_len = 0;
-	return true;
+void _SSet_clear(SSetInternal* sset) {
+	sset->len = 0;
+	sset->free_stack_len = 0;
 }
 
-uint32_t _SSet_push_back(SSetInternal* s_set, void* item, size_t item_size) {
-	if (s_set->len >= s_set->cap) {
-		return false;
+uint32_t _SSet_push_back(SSetInternal* sset, void* item, size_t item_size) {
+	if (sset->len >= sset->cap) {
+		return UINT32_MAX;
 	}
 
 	// calculate indices for sparse and dense of new item
-	uint32_t dense_position = s_set->len;
-	uint32_t dense_index = dense_position  * item_size;
+	uint32_t dense_position = sset->len;
+	uint32_t dense_index = dense_position * item_size;
 	uint32_t sparse_index = 0;
-	if (s_set->free_stack_len > 0) {
-		sparse_index = s_set->sparse_free_stack[--s_set->free_stack_len];
+	if (sset->free_stack_len > 0) {
+		sparse_index = sset->sparse_free_stack[--sset->free_stack_len];
 	} else {
 		sparse_index = dense_position;
 	}
 
 	// push_back sparse_index|item to dense
-	memcpy(s_set->dense + dense_index, item, item_size);
+	memcpy(sset->dense + dense_index, item, item_size);
 
 	// set sparse at sparse_index to dense_index
-	s_set->sparse[sparse_index] = dense_index;
-	s_set->dense_to_sparse_map[dense_position] = sparse_index;
+	sset->sparse[sparse_index] = dense_position;
+	sset->dense_to_sparse_map[dense_position] = sparse_index;
 
-	s_set->len++;
+	sset->len++;
 
 	// sparse_index == unique & stable id
 	return sparse_index;
 }
 
-void* _SSet_get(SSetInternal* s_set, int sparse_index) {
-	if (sparse_index >= s_set->len + s_set->free_stack_len) {
+void* _SSet_get(SSetInternal* sset, uint32_t sparse_index, size_t item_size) {
+	if (sparse_index >= sset->len + sset->free_stack_len) {
 		return NULL;
 	}
-	return s_set->dense + s_set->sparse[sparse_index];
+	uint32_t dense_position = sset->sparse[sparse_index];
+	return sset->dense + dense_position * item_size;
 }
 
 
-void* _SSet_at(SSetInternal* s_set, int dense_position, int item_size) {
-	if (dense_position >= s_set->len) {
+void* _SSet_at(SSetInternal* sset, uint32_t dense_position, size_t item_size) {
+	if (dense_position >= sset->len) {
 		return NULL;
 	}
-	return s_set->dense + dense_position * item_size;
+	return sset->dense + dense_position * item_size;
 }
 
 // SSet_get_id
-uint32_t _SSet_get_sparse_index(SSetInternal* s_set, uint32_t dense_position) {
-	return s_set->dense_to_sparse_map[dense_position];
+uint32_t _SSet_get_sparse_index(SSetInternal* sset, uint32_t dense_position) {
+	if (dense_position >= sset->len) {
+		return UINT32_MAX;
+	}
+	return sset->dense_to_sparse_map[dense_position];
 }
 
-bool _SSet_remove(SSetInternal* s_set, int sparse_index, int item_size) {
-	if (sparse_index >= s_set->len + s_set->free_stack_len) {
-		return NULL;
+bool _SSet_remove(SSetInternal* sset, uint32_t sparse_index_remove_item, size_t item_size) {
+	if (sparse_index_remove_item >= sset->len + sset->free_stack_len) {
+		return false;
 	}
 
-	uint32_t dense_index = s_set->sparse[sparse_index];
-	uint32_t dense_position = 0;
-	if (dense_index != 0) {
-		dense_position = dense_index / item_size;
-	}
+	uint32_t dense_position_remove_item = sset->sparse[sparse_index_remove_item];
+	uint32_t dense_index_remove_item = dense_position_remove_item * item_size;
 
-	uint32_t last_dense_position = s_set->len - 1;
-	uint32_t last_dense_index = last_dense_position * item_size;
+	uint32_t dense_position_last = sset->len - 1;
+	uint32_t dense_index_last = dense_position_last * item_size;
 
 	// check if item is last in dense
-	if (dense_index != last_dense_index) {
+	if (dense_index_remove_item != dense_index_last) {
 		// replace the touple to remove with the last touple in dense
-		memcpy(s_set->dense + dense_index,
-					 s_set->dense + last_dense_index,
+		memcpy(sset->dense + dense_index_remove_item,
+					 sset->dense + dense_index_last,
 					 item_size);
 
 		// copy the sparse index of dense
-		s_set->dense_to_sparse_map[dense_position] = 
-			s_set->dense_to_sparse_map[last_dense_position];
+		sset->dense_to_sparse_map[dense_position_remove_item] =
+			sset->dense_to_sparse_map[dense_position_last];
 
 		// copier den sparse vom to remove item in den sparse vom letzten item
-		s_set->sparse[s_set->dense_to_sparse_map[last_dense_position]] = 
-			dense_index;
+		sset->sparse[sset->dense_to_sparse_map[dense_position_last]] = 
+			dense_position_remove_item;
 
-		// push the dead sparse_index onto the stack
-		s_set->sparse_free_stack[s_set->free_stack_len++] = sparse_index;
+		// push the free sparse_index onto the stack
+		sset->sparse_free_stack[sset->free_stack_len++] = sparse_index_remove_item;
 	}
-	s_set->len--;
+	sset->len--;
 	return true;
 }

@@ -1,16 +1,7 @@
 #include "coroutines.h"
 
-ManipUpdateFunc manip_funcs[MANIP_TYPE_COUNT] = { update_manip_move1,
-																									update_manip_move2 };
-
-DynObject* get_dynamic_object_by_id(CoState* co, int id) {
-	for (int i = 0; i < ARR_LIST_LEN(co->dyn_objects); i++) {
-		if (ArrList_at(&co->dyn_objects, i)->id == id) {
-			return ArrList_at(&co->dyn_objects, i);
-		}
-	}
-	return NULL;
-}
+const ManipUpdateFunc manip_funcs[MANIP_TYPE_COUNT] = {update_manip_move1,
+                                                       update_manip_move2};
 
 void lua_create_level(CoState* co, int width, int height) {
 	co->level.width = width;
@@ -29,11 +20,11 @@ int wrap_lua_create_level(lua_State* L) {
 
 int create_dynamic_object(CoState* co, Vec2 position) {
 	DynObject dyn = {};
-	dyn.id = co->dyn_id_counter++;
 	dyn.position = position;
 	dyn.color = 0xFFFFFFFF;
-	ArrList_push_back(&co->dyn_objects, &dyn);
-	return dyn.id;
+	uint32_t dyn_object_id = SSet_push_back(&co->dyn_objects, &dyn);
+	if (dyn_object_id == UINT32_MAX) { EXIT(); }
+	return dyn_object_id;
 }
 
 int lua_create_dynamic_object(lua_State* L) {
@@ -57,13 +48,10 @@ int lua_assign_player_control(lua_State* L) {
 	return 0;
 }
 
-bool update_manip_move2(CoState* co, Manip* manip, float frame_dt) {
+bool update_manip_move2(Manip* manip, DynObject* dyn_object, float frame_dt) {
+	return false;
 }
-bool update_manip_move1(CoState* co, Manip* manip, float frame_dt) {
-
-	// get dynamic object from id
-	DynObject* dyn_object = get_dynamic_object_by_id(co, manip->dyn_object_id);
-
+bool update_manip_move1(Manip* manip, DynObject* dyn_object, float frame_dt) {
 	manip->time_passed += frame_dt;
 	if (manip->time_passed >= manip->run_time) {
 		dyn_object->position = manip->target_pos;
@@ -80,54 +68,58 @@ bool update_manip_move1(CoState* co, Manip* manip, float frame_dt) {
 bool update_manips(CoState* co, lua_State* L, float elapsed_time) {
 
 	// --- add new manips to active manips
-	for (int i = 0; i < ARR_LIST_LEN(co->new_manips); i++) {
-		Manip* new_manip = ArrList_at(&co->new_manips, i);
-		ArrList_push_back(&co->manips, new_manip);
+	for (uint32_t i = 0; i < SSET_LEN(co->new_manips); i++) {
+		Manip* new_manip = SSet_at(&co->new_manips, i);
+		if (!new_manip) { EXIT(); }
+		uint32_t manip_id = SSet_push_back(&co->manips, new_manip);
+		if (manip_id == UINT32_MAX) { EXIT(); }
 	}
-	ARR_LIST_LEN(co->new_manips) = 0;
+	SSet_clear(&co->new_manips);
 
 	// --- run update functions of active manips ---
-	for (int i = 0; i < ARR_LIST_LEN(co->manips); i++) {
-		Manip* manip = ArrList_at(&co->manips, i);
-		DynObject* dyn = get_dynamic_object_by_id(co, manip->dyn_object_id);
+	// this runs from backk to front to because manips can be removed
+	for (int64_t i = (int64_t)SSET_LEN(co->manips) - 1; i >= 0; i--) {
+		Manip* manip = SSet_at(&co->manips, i);
+		if (!manip) { EXIT(); }
 
-		bool done = manip_funcs[manip->manip_type](co, manip, elapsed_time);
+		DynObject* dyn_object = SSet_get(&co->dyn_objects, manip->dyn_object_id);
+		if (!dyn_object) { EXIT(); }
+
+
+		bool done = manip_funcs[manip->manip_type](manip, dyn_object, elapsed_time);
 		if (done) {
+			// --- continue lua coroutine ---
 			lua_getglobal(L, "issue_next_task");
 			if(lua_isfunction(L, -1)) {
 				lua_pushlightuserdata(L, co);
-				lua_pushnumber(L, dyn->id);
+				lua_pushnumber(L, manip->dyn_object_id);
 				if (core_lua_check(L, lua_pcall(L, 2, 1, 0))) {
 				} else {
 					EXIT();
 				}
 			}
+
+			// --- remove manip---
+			bool result = SSet_remove(&co->manips, SSet_id_at(&co->manips, i));
+			if (!result) { EXIT(); }
 		}
 	}
-
-	// --- remove finished manips---
-	for (int i = 0; i < ARR_LIST_LEN(co->manips); i++) {
-		Manip* manip = ArrList_at(&co->manips, i);
-		if (manip->done) {
-			ArrList_remove(&co->manips, i);
-		}
-	}
-
 	return true;
 }
 
 // bad name, this actually does to many things, creates object
 void move_object(CoState* co, int dyn_object_id, Vec2 pos, float run_time) {
 	Manip new_manip = {};
-	DynObject* dyn_object = get_dynamic_object_by_id(co, dyn_object_id);
-	new_manip.id = co->manip_id_counter++;
-	new_manip.dyn_object_id = dyn_object->id;
+	DynObject* dyn_object = SSet_get(&co->dyn_objects, dyn_object_id);
+	if (!dyn_object) { EXIT(); }
+	new_manip.dyn_object_id = dyn_object_id;
 	new_manip.start_pos = dyn_object->position;
 	new_manip.target_pos = pos;
 	new_manip.run_time = run_time;
 	new_manip.manip_type = MOVE1;
-	ArrList_push_back(&co->new_manips, &new_manip);
-	printf("len: %ld\n", ARR_LIST_LEN(co->new_manips));
+	new_manip.done = false;
+	uint32_t manip_id = SSet_push_back(&co->new_manips, &new_manip);
+	if (manip_id == UINT32_MAX) { EXIT(); }
 }
 
 int lua_move_object(lua_State* L) {

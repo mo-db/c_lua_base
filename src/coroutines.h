@@ -8,8 +8,7 @@ int lua_assign_player_control(lua_State* L);
 int lua_move_object(lua_State* L);
 
 typedef struct {
-	int id;
-	bool dead;
+	bool dead; // where to use?
 	Vec2 position;
 	Vec2 size;
 	uint32_t color;
@@ -22,7 +21,6 @@ typedef enum {
 } ManipType;
 
 typedef struct {
-  int id;
 	int dyn_object_id;
   ManipType manip_type;
 
@@ -38,21 +36,18 @@ typedef struct {
 } Level;
 
 #define MAX_DYN_OBJECTS 1024
-#define MAX_MANIPS 64
+#define MAX_MANIPS 1024
 typedef struct {
-	ArrList(DynObject) dyn_objects;
-	int dyn_id_counter;
-	int player_control_object;
-	ArrList(Manip) manips;
-	ArrList(Manip) new_manips;
-	int manip_id_counter;
+	SSet(DynObject) dyn_objects;
+	uint32_t player_control_object;
+	SSet(Manip) manips;
+	SSet(Manip) new_manips;
 	Level level;
 } CoState;
 
 
-typedef bool (*ManipUpdateFunc)(CoState* co, Manip* m, float dt);
-bool update_manip_move1(CoState* co, Manip* m, float dt);
-bool update_manip_move2(CoState* co, Manip* m, float dt);
+typedef bool (*ManipUpdateFunc)(Manip* manip, DynObject* dyn_object, float frame_dt);
+bool update_manip_move1(Manip* manip, DynObject* dyn_object, float frame_dt);
+bool update_manip_move2(Manip* manip, DynObject* dyn_object, float frame_dt);
 bool update_manips(CoState* co, lua_State* L, float elapsed_time);
-DynObject* get_dynamic_object_by_id(CoState* co, int id);
 
