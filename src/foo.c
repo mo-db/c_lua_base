@@ -57,6 +57,136 @@ void bar(App* app) {
 	}
 }
 
+#define MAX_DEPTH 1024
+double stack[MAX_DEPTH];
+uint32_t depth = 0;
+
+bool stack_push_back(double value) {
+	if (depth > MAX_DEPTH) { EXIT(); }
+	stack[depth++] = value;
+	return true;
+}
+double stack_pop() {
+	if (depth == 0) { EXIT(); }
+	return stack[--depth];
+}
+
+double eval_expression(char* expr) {
+	while (*expr != '\0') {
+		printf("bar\n");
+		if (isspace(*expr)) {
+			expr++;
+		}
+		else if (isdigit(*expr)) {
+			char* new_expr_ptr = NULL;
+			double value = strtod(expr, &new_expr_ptr);
+			stack_push_back(value);
+			expr = new_expr_ptr;
+		}
+		else {
+			// unary operations to switch sign
+			if (depth == 1) {
+				if (*expr == '-') {
+					stack_push_back(-stack_pop());
+				}
+				else if (*expr == '+') {
+					stack_push_back(+stack_pop());
+				}
+				else {
+					EXIT();
+				}
+			// binary operations
+			} else {
+				if (*expr == '+') { 
+					double a = stack_pop();
+					double b = stack_pop();
+					stack_push_back(b + a);
+				}
+				else if (*expr == '-') {
+					double a = stack_pop();
+					double b = stack_pop();
+					stack_push_back(b - a);
+				}
+				else if (*expr == '*') {
+					double a = stack_pop();
+					double b = stack_pop();
+					stack_push_back(b * a);
+				}
+				else if (*expr == '/') {
+					double a = stack_pop();
+					double b = stack_pop();
+					stack_push_back(b / a);
+				}
+				else if (*expr == '^') {
+					double a = stack_pop();
+					double b = stack_pop();
+					stack_push_back(pow(b, a));
+				}
+				else if (*expr == '<') {
+					double a = stack_pop();
+					double b = stack_pop();
+					if (*(expr + 1) != '\0' && *(expr + 1) == '=') {
+						expr++;
+						stack_push_back(b <= a);
+					} else {
+						stack_push_back(b < a);
+					}
+				}
+				else if (*expr == '>') {
+					double a = stack_pop();
+					double b = stack_pop();
+					if (*(expr + 1) != '\0' && *(expr + 1) == '=') {
+						expr++;
+						stack_push_back(b >= a);
+					} else {
+						stack_push_back(b > a);
+					}
+				}
+				else if (*expr == '=') {
+					double a = stack_pop();
+					double b = stack_pop();
+					stack_push_back(b = a);
+				}
+				else {
+					EXIT();
+				}
+			}
+			expr++;
+		}
+	}
+	return stack_pop();
+}
+
+double rpn(char *s)
+{
+	double a, b;
+	int i;
+	char *e, *w = " \t\n\r\f";
+
+	for (s = strtok(s, w); s; s = strtok(0, w)) {
+		a = strtod(s, &e);
+		if (e > s)		printf(" :"), stack_push_back(a);
+#define binop(x) printf("%c:", *s), b = stack_pop(), \
+		a = stack_pop(), stack_push_back(x)
+		else if (*s == '+')	binop(a + b);
+		else if (*s == '-')	binop(a - b);
+		else if (*s == '*')	binop(a * b);
+		else if (*s == '/')	binop(a / b);
+		else if (*s == '^')	binop(pow(a, b));
+#undef binop
+		else {
+			fprintf(stderr, "'%c': ", *s);
+			EXIT();
+		}
+		for (i = depth; i-- || 0 * putchar('\n'); )
+			printf(" %g", stack[i]);
+	}
+
+	if (depth != 1) EXIT();
+
+	return stack_pop();
+}
+
 void get_tokens() {
 	char symbol[0xF-1];
 	char condition[0xFF-1];

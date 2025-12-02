@@ -4,9 +4,16 @@
 #include "render.h"
 #include "foo.h"
 #include "regex.h"
+#include "rpn.h"
 
 #define W 640
 #define H 480
+
+
+// bei context-sensitive languages gibt es kein verfahren
+// welches entscheiden kann ob ein wort in der sprache ist
+// -> bei context-frei gibt es den CYK algorithmus
+// -> deswegen pumpinglemma 2 zur unterscheidung
 
 int main() {
 	App app = {};
@@ -21,6 +28,16 @@ int main() {
 
 	// regex_match(pattern, subject);
 
+	char* expr = "9 9 / 5 * 2 * 3 ^";
+	RPNState rpn = {};
+	bool error = false;
+	double result = eval_rpn(&rpn, expr, &error);
+	if (error) {
+		printf("rpn_eval error\n");
+	} else {
+		printf("result: %f\n", result);
+	}
+	return 0;
 	co_init(&app);
 
 
