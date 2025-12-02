@@ -28,12 +28,12 @@ int main() {
 
 	// regex_match(pattern, subject);
 
-	char* expr = "9 9 / 5 * 2 * 3 ^";
+	char* expr = "9 9 9 /";
 	RPNState rpn = {};
 	bool error = false;
 	double result = eval_rpn(&rpn, expr, &error);
 	if (error) {
-		printf("rpn_eval error\n");
+		printf("EXPRESSION WRONG: rpn_eval error\n");
 	} else {
 		printf("result: %f\n", result);
 	}

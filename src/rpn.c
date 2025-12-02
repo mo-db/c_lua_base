@@ -89,6 +89,7 @@ double eval_rpn(RPNState* state, char* expr, bool* error) {
 		}
 	}
 	double final_value = _pop(state, error);
+	if (state->stack_depth > 0) { *error = true; return 0; }
 	if (*error) { return 0; }
 	return final_value;
 }
