@@ -1,4 +1,5 @@
 #include "foo.h"
+#include "lang_gen.h"
 
 void foo(App* app, Trigon* trigons) {
 	lua_State *L = app->state.L;
@@ -57,21 +58,41 @@ void bar(App* app) {
 	}
 }
 
-typedef struct {
-	char ident;
-	double value;
-} Var;
-double map_vars(char var) {
-	switch (var) {
-		case 'm': 5
+bool map_Var_to_SSet(SSet_double* sset, uint32_t* map, Var var) {
+	uint32_t id = SSet_push_back(sset, &var.value);
+	if (id == UINT32_MAX) {
+		return false;
 	}
+	map[(uint32_t)var.ch] = id;
+	return true;
 }
 
 void get_tokens() {
-	char symbol[0xF-1];
-	char condition[0xFF-1];
-	char context[0xFF-1];
-	char replacement[0xFFF-1];
+
+	printf("### prod ###\n");
+	Production prod = parse_production_str("hallo : blub : adsf ! joda");
+	printf("prod:\n");
+	LS_print(prod.symbol);
+	printf("\n");
+	LS_print(prod.condition);
+	printf("\n");
+	LS_print(prod.context);
+	printf("\n");
+	LS_print(prod.replacement);
+	printf("\n");
+
+
+	SSet(double) global_vars;
+	if (!SSet_alloc(&global_vars, 128)) { EXIT(); }
+	uint32_t char_to_id_map[128];
+	Var vars[2] = { (Var){'h', 33}, (Var){'j', 123.123} };
+	for (int i = 0; i < 2; i++) {
+		bool result = map_Var_to_SSet(&global_vars, char_to_id_map, vars[i]);
+		if (!result) { EXIT(); }
+	}
+
+	printf("j: %f\n", *SSet_get(&global_vars, char_to_id_map['j']));
+	printf("h: %f\n", *SSet_get(&global_vars, char_to_id_map['h']));
 }
 
 void co_init(App* app) {

@@ -37,7 +37,15 @@ int main() {
 	} else {
 		printf("result: %f\n", result);
 	}
+
+
+	get_tokens();
+
 	return 0;
+
+
+
+
 	co_init(&app);
 
 

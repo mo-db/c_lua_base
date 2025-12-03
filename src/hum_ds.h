@@ -85,6 +85,12 @@ typedef struct {
 		type* payload; \
 	}
 
+#define SSET_DEFINE(name, type)         \
+	typedef union name {                \
+		SSetInternal internal;          \
+		type *payload;                  \
+	} name;
+
 #define SSET_LEN(sset) (sset).internal.len
 #define SSET_CAP(sset) (sset).internal.cap
 
@@ -97,6 +103,11 @@ bool _SSet_alloc(SSetInternal* sset, uint32_t cap, size_t item_size);
 void _SSet_clear(SSetInternal* sset);
 #define SSet_clear(sset) \
 	(_SSet_clear(&(sset)->internal))
+
+void _SSet_free(SSetInternal* sset);
+#define SSet_free(sset) \
+	(_SSet_free(&(sset)->internal))
+
 
 uint32_t _SSet_push_back(SSetInternal* sset, void* item, size_t item_size); 
 #define SSet_push_back(sset, item) \

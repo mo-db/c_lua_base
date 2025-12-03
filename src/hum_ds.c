@@ -75,6 +75,7 @@ bool _SSet_alloc(SSetInternal* sset, uint32_t cap, size_t item_size) {
 	if (!sset->sparse_free_stack) { return false; }
 
 	sset->len = 0;
+	sset->free_stack_len = 0;
 	sset->cap = cap;
 	return true;
 }
@@ -82,6 +83,16 @@ bool _SSet_alloc(SSetInternal* sset, uint32_t cap, size_t item_size) {
 void _SSet_clear(SSetInternal* sset) {
 	sset->len = 0;
 	sset->free_stack_len = 0;
+}
+
+void _SSet_free(SSetInternal* sset) {
+	free(sset->dense);
+	free(sset->dense_to_sparse_map);
+	free(sset->sparse);
+	free(sset->sparse_free_stack);
+	sset->len = 0;
+	sset->free_stack_len = 0;
+	sset->cap = 0;
 }
 
 uint32_t _SSet_push_back(SSetInternal* sset, void* item, size_t item_size) {
