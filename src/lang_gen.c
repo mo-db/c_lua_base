@@ -4,6 +4,10 @@ Generator new_generator() {
 	Generator gen = {};
 	SSet_alloc(&gen.vars, 128);
 	SSet_alloc(&gen.productions, 64);
+	gen.old_string.data = gen.old_string_cache;
+	gen.new_string.data = gen.new_string_cache;
+	gen.replace.data = gen.replacement_cache;
+	gen.iterations = 1;
 	return gen;
 }
 
@@ -87,6 +91,11 @@ Production parse_production_str(char* str_in) {
 // first try without args
 bool eval_production(Generator* gen, LS replacement) {
 	// memcpy replacement into cache
+	// i dont even need to copy! i can just use the replace string view
+	memcpy(gen->replace.data, replacement.data,
+			replacement.len);
+	gen->replace.len = replacement.len;
+	return true;
 
 	// complex later
 	int new_prod_index = 0;	
@@ -108,24 +117,48 @@ bool eval_production(Generator* gen, LS replacement) {
 }
 
 // give pointer to symbole
-bool maybe_replace(Generator* gen) {
+bool maybe_replace(Generator* gen, char* symbol) {
+	for (int i = 0; i < SSET_LEN(gen->productions); i++) {
+		Production* prod = SSet_at(&gen->productions, i);
+		if (*prod->symbol.data != *symbol) { continue; }
+
+		// check condition
+
+		// check context
+
+		// replace
+		if (eval_production(gen, prod->replacement)) {
+			return true;
+		} else { EXIT(); }
+	}
+
+	return false;
+
 	// test if rule applies
 	
-	if (eval_production(prod.replacement)) {
-		return true;
-	}
+	// 	return true;
+	// }
 }
 
 // returns true if it could finish
 bool expand(Generator* gen) {
 	// if in_str == NULL eval_production S
 	
-	if (gen->current_iteration == 0) {
-		//maybe_replace(S)
-	}
-
+	
 	uint32_t old_index = gen->current_index_old;
 	uint32_t new_index = gen->current_index_new;
+
+	if (gen->current_iteration == 0) {
+		char s = 'S';
+		if (maybe_replace(gen, &s)) {
+			memcpy(gen->new_string.data + new_index, gen->replace.data,
+					gen->replace.len);
+			new_index += gen->replace.len;
+			gen->new_string.len += gen->replace.len;
+		} else { EXIT(); }
+		return true;
+		//maybe_replace(S)
+	}
 
 	while (old_index < gen->old_string.len) {
 		// check time, abort and save current index
@@ -134,12 +167,13 @@ bool expand(Generator* gen) {
 		// if true, add replacement to new_str
 		// else copy symbol+block to new_str
 
-		if (maybe_replace()) {
-			memcpy(gen->new_string + new_index, gen->replacement_cache,
-						gen->replace.len);
-			new_index += gen->replace.len;
-		}
+		// if (maybe_replace(gen)) {
+		// 	memcpy(gen->new_string + new_index, gen->replacement_cache,
+		// 				gen->replace.len);
+		// 	new_index += gen->replace.len;
+		// }
 	}
+	return false;
 }
 
 bool generate_timed(Generator* gen) {
@@ -159,6 +193,7 @@ void reset_generator(Generator* gen) {
 		gen->current_iteration = 0;
 		gen->current_index_old = 0;
 		gen->current_index_new = 0;
+		gen->done_generating = false;
 }
 
 void update_generator(Generator* gen) {

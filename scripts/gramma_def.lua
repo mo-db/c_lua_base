@@ -22,8 +22,9 @@ k = 0
 -- productions
 -- Symbol (opt)Parameters : (opt)condition : (opt)context -> replacement
 productions = {
-  [0] = 'S -> A[-A]{+A]',
-  [1] = 'A{x} : u < 5 : bAB -> BBAba',
+  [0] = 'S ! A[-A]{+A]',
+  [1] = 'A{x} : u < 5 : bAB ! BBAbakkkkkkkkkk',
+  [2] = 'A{x} : u < 5 : bAB ! flu',
   -- ...
 }
 

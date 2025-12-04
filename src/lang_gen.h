@@ -31,10 +31,15 @@ typedef struct {
 	SSet_double vars;
 	uint32_t char_id_map[128];
 	SSet_production productions;
+
 	char replacement_cache[4096];
 	LS replace;
-	char old_string[50000];
-	char new_string[50000];
+
+	char old_string_cache[50000];
+	LS old_string;
+	char new_string_cache[50000];
+	LS new_string;
+
 	uint32_t current_index_new;
 	uint32_t current_index_old;
 
@@ -51,3 +56,8 @@ bool map_Var_to_SSet(SSet_double* sset, uint32_t* map, Var var);
 
 Production parse_production_str(char* str_in);
 void LS_print(LS ls);
+
+Generator new_generator();
+void update_generator(Generator* gen);
+
+

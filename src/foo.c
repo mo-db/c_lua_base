@@ -1,5 +1,4 @@
 #include "foo.h"
-#include "lang_gen.h"
 
 void foo(App* app, Trigon* trigons) {
 	lua_State *L = app->state.L;
@@ -24,10 +23,7 @@ void foo(App* app, Trigon* trigons) {
 }
 
 
-void bar(App* app) {
-	if (became_true(app->state.input.shift)) {
-		app->state.L = reload_lua();
-	}
+void configure_generator(App* app, Generator* gen) {
 	lua_State *L = app->state.L;
 
 	// convert lua table to array
@@ -39,7 +35,7 @@ void bar(App* app) {
 	} else {
 		EXIT();
 	}
-	char* result[size];
+	// char* result[size];
 
 	for (int i = 0; i < size; i++) {
 		lua_getglobal(L, "productions");
@@ -50,11 +46,28 @@ void bar(App* app) {
 				printf("no string");
 				return;
 			}
-			result[i] = (char *)lua_tostring(L, -1);
-			printf("result: %s\n", result[i]);
+			Production prod = parse_production_str((char *)lua_tostring(L, -1));
+			SSet_push_back(&gen->productions, &prod);
+			// result[i] = (char *)lua_tostring(L, -1);
+			// printf("result: %s\n", result[i]);
 		} else {
 			EXIT();
 		}
+	}
+	gen->reset_needed = true;
+
+	// TEST
+	for (int i = 0; i < SSET_LEN(gen->productions); i++) {
+		printf("prod: %d\n", i);
+		Production* prod = SSet_at(&gen->productions, i);
+		LS_print(prod->symbol);
+		printf("\n");
+		LS_print(prod->condition);
+		printf("\n");
+		LS_print(prod->context);
+		printf("\n");
+		LS_print(prod->replacement);
+		printf("\n");
 	}
 }
 
@@ -68,18 +81,9 @@ bool map_Var_to_SSet(SSet_double* sset, uint32_t* map, Var var) {
 }
 
 void get_tokens() {
-
 	printf("### prod ###\n");
 	Production prod = parse_production_str("hallo : blub : adsf ! joda");
-	printf("prod:\n");
-	LS_print(prod.symbol);
-	printf("\n");
-	LS_print(prod.condition);
-	printf("\n");
-	LS_print(prod.context);
-	printf("\n");
-	LS_print(prod.replacement);
-	printf("\n");
+
 
 
 	SSet(double) global_vars;

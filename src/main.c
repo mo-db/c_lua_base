@@ -19,6 +19,8 @@ int main() {
 	App app = {};
 	app_init(&app, W, H);
 
+
+
 	// lua_register(app.state.L, "lua_create_level", wrap_lua_create_level);
 
 	app.state.L = reload_lua();
@@ -39,9 +41,10 @@ int main() {
 	}
 
 
-	get_tokens();
+	Generator gen = new_generator();
+	
+	configure_generator(&app, &gen);
 
-	return 0;
 
 
 
@@ -79,8 +82,23 @@ int main() {
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
 
+		if (became_true(app.state.input.shift)) {
+			app.state.L = reload_lua();
+			configure_generator(&app, &gen);
+		}
 
-		co_update(&app, elapsed_time);
+		if (became_true(app.state.input.ctrl)) {
+			gen.iterations++;
+		}
+
+		update_generator(&gen);
+
+		printf("new lstring:\n");
+		LS_print(gen.new_string);
+		printf("\n");
+
+
+		// co_update(&app, elapsed_time);
 
 
 
