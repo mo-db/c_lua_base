@@ -81,3 +81,95 @@ Production parse_production_str(char* str_in) {
 	return prod;
 	// done
 }
+
+// replacement has been formated to:
+// [S{x,y,z} or not ? do i need defaults, i think i do, scaling vals
+// first try without args
+bool eval_production(Generator* gen, LS replacement) {
+	// memcpy replacement into cache
+
+	// complex later
+	int new_prod_index = 0;	
+	int prod_index = 0;	
+	bool result = true;
+	while (prod_index < replacement.len) {
+		//result = get_arg_block();	
+
+		// parse into strings
+		//result = parse_arg_block();
+
+		// arraylist of n doubles 
+		//result = eval_args();
+
+		// combine into evaluated arg block string
+		//snprintf()
+		// copy onto prod_cache
+	}
+}
+
+// give pointer to symbole
+bool maybe_replace(Generator* gen) {
+	// test if rule applies
+	
+	if (eval_production(prod.replacement)) {
+		return true;
+	}
+}
+
+// returns true if it could finish
+bool expand(Generator* gen) {
+	// if in_str == NULL eval_production S
+	
+	if (gen->current_iteration == 0) {
+		//maybe_replace(S)
+	}
+
+	uint32_t old_index = gen->current_index_old;
+	uint32_t new_index = gen->current_index_new;
+
+	while (old_index < gen->old_string.len) {
+		// check time, abort and save current index
+		
+		// for each symbol maybe_replace
+		// if true, add replacement to new_str
+		// else copy symbol+block to new_str
+
+		if (maybe_replace()) {
+			memcpy(gen->new_string + new_index, gen->replacement_cache,
+						gen->replace.len);
+			new_index += gen->replace.len;
+		}
+	}
+}
+
+bool generate_timed(Generator* gen) {
+	int iterations = gen->iterations;
+	int current_iteration = gen->current_iteration;
+	while (current_iteration < iterations) {
+		if (expand(gen)) {
+			current_iteration++;
+		} else {
+			return false;
+		}
+	}
+	return true;
+}
+
+void reset_generator(Generator* gen) {
+		gen->current_iteration = 0;
+		gen->current_index_old = 0;
+		gen->current_index_new = 0;
+}
+
+void update_generator(Generator* gen) {
+	if (gen->reset_needed) {
+		reset_generator(gen);
+		gen->reset_needed = false;
+	}
+	
+	if (!gen->done_generating) {
+		if (generate_timed(gen)) {
+			gen->done_generating = true;
+		}
+	}
+}

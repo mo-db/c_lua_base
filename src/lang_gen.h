@@ -1,7 +1,6 @@
 #include "core.h"
 #include "hum_ds.h"
 
-
 #define S(str) \
 	(LS){(str), strlen(str)}
 
@@ -32,6 +31,17 @@ typedef struct {
 	SSet_double vars;
 	uint32_t char_id_map[128];
 	SSet_production productions;
+	char replacement_cache[4096];
+	LS replace;
+	char old_string[50000];
+	char new_string[50000];
+	uint32_t current_index_new;
+	uint32_t current_index_old;
+
+  bool reset_needed;
+  bool done_generating;
+  int current_iteration;
+  int iterations;
 } Generator;
 
 char* gen_iterate();
