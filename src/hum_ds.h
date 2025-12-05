@@ -1,11 +1,79 @@
 #pragma once
+#include <core.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
-#include <stddef.h>
-#include <string.h>
-// #include <math.h>
+// LS
+typedef struct {
+	char* data;
+	uint32_t len;
+	uint32_t cap;
+} LS;
+
+typedef struct {
+	char* data;
+	uint32_t len;
+} LSView;
+
+LSView static inline LS_get_view(LS ls) {
+	return (LSView){ls.data, ls.len};
+}
+
+uint32_t static inline strlen_save(char* str) {
+	uint32_t len = strnlen(str, UINT32_MAX);
+	if (len == 0 || len == UINT32_MAX) { EXIT(); }
+	return len;
+}
+
+LSView static inline get_view(char* str) {
+	return (LSView){(str), strlen_save(str)};
+}
+
+LS LS_new(uint32_t cap);
+LS LS_new_from_cstring(char* str);
+void LS_free(LS* ls);
+
+// returns amount of appended characters, or 0 on failure
+uint32_t LS_append(LS* str_dest, LSView str);
+bool LS_append_char(LS* str_dest, char ch);
+void LS_print(LSView ls);
+
+
+// sa
+#define SMALL_SEGMENTS_TO_SKIP 6
+
+#define log2i(X) ((uint32_t) (8*sizeof(unsigned long long) \
+    - __builtin_clzll((X)) - 1))
+
+typedef struct {
+    uint32_t count;
+    int used_segments;
+    uint8_t* segments[26];
+} SegmentArrayInternal;
+
+#define SegmentArray(type) \
+    union { \
+        SegmentArrayInternal internal; \
+        type* payload; \
+    }
+
+#define SA_DEFINE(name, type)         \
+	typedef union name {                \
+		SegmentArrayInternal internal;          \
+		type *payload;                  \
+	} name;
+
+
+uint32_t capacity_for_segment_count(int segment_count);
+void* _sa_get(SegmentArrayInternal* sa, uint32_t index, size_t item_size);
+#define sa_get(sa, index) \
+    ((typeof((sa)->payload))_sa_get(&(sa)->internal, \
+                                    index,  \
+                                    sizeof(*(sa)->payload)))
+    
+
+void* _sa_alloc(SegmentArrayInternal* sa, size_t item_size);
+#define sa_alloc(sa) \
+    (typeof((sa)->payload))_sa_alloc(&(sa)->internal, \
+                                     sizeof(*(sa)->payload))
 
 
 // --- ArrList ---
@@ -27,6 +95,12 @@ typedef struct {
 		ArrListInternal internal; \
 		type* payload; \
 	}
+
+#define AL_DEFINE(name, type)         \
+	typedef union name {                \
+		ArrayListInternal internal;          \
+		type *payload;                  \
+	} name;
 
 // A array list needs to be initialized by caller, then alloc data for it
 bool _ArrList_alloc(ArrListInternal* arr_list, uint32_t cap, size_t item_size);
@@ -91,6 +165,8 @@ typedef struct {
 		type *payload;                  \
 	} name;
 
+
+
 #define SSET_LEN(sset) (sset).internal.len
 #define SSET_CAP(sset) (sset).internal.cap
 
@@ -108,6 +184,19 @@ void _SSet_free(SSetInternal* sset);
 #define SSet_free(sset) \
 	(_SSet_free(&(sset)->internal))
 
+#define SSET_MAKE_API(name, type)                                           \
+static name* name##_new(uint32_t cap) {                                     \
+    name* s = (name*)malloc(sizeof(name));                                  \
+    if (!s) return NULL;                                                     \
+    memset(s, 0, sizeof(*s));                                                \
+    if (!_SSet_alloc(&s->internal, cap, sizeof(type))) { free(s); return NULL; } \
+    return s;                                                                \
+}                                                                           \
+static void name##_free(name* s) {                                           \
+    if (!s) return;                                                          \
+    _SSet_free(&s->internal);                                                \
+    free(s);                                                                 \
+}
 
 uint32_t _SSet_push_back(SSetInternal* sset, void* item, size_t item_size); 
 #define SSet_push_back(sset, item) \

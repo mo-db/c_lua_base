@@ -11,12 +11,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <limits.h>
 #include <float.h>
 #include <math.h>
 #include <string.h>
-
-#include "hum_ds.h"
 
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
@@ -31,6 +30,12 @@
 		exit(EXIT_FAILURE);\
 	} while (0)
 
+#define EXIT_MSG(msg)\
+	do {\
+		fprintf(stderr,"ERROR [%s:%d] %s()\n->%s\n",\
+							 __FILE__, __LINE__, __func__, msg);\
+		exit(EXIT_FAILURE);\
+	} while (0)
 
 bool core_lua_check(lua_State *L, int result);
 bool core_epsilon_equal(double x, double y);

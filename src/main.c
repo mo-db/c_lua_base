@@ -82,20 +82,19 @@ int main() {
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
 
-		if (became_true(app.state.input.shift)) {
-			app.state.L = reload_lua();
-			configure_generator(&app, &gen);
-		}
-
+		// if (became_true(app.state.input.shift)) {
+		// 	app.state.L = reload_lua();
+		// 	configure_generator(&app, &gen);
+		// }
+		//
 		if (became_true(app.state.input.ctrl)) {
 			gen.iterations++;
+			gen.done_generating = false;
 		}
 
 		update_generator(&gen);
 
-		printf("new lstring:\n");
-		LS_print(gen.new_string);
-		printf("\n");
+
 
 
 		// co_update(&app, elapsed_time);

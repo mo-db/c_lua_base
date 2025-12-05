@@ -1,5 +1,89 @@
 #include "hum_ds.h"
 
+// LS
+
+
+LS LS_new(uint32_t cap) {
+	LS ls = {};
+	ls.data = malloc(cap);
+	ls.len = 0;
+	ls.cap = cap;
+	if (!ls.data) { EXIT(); }
+	return ls;
+}
+
+LS LS_new_from_cstring(char* str) {
+	uint32_t len = strlen_save(str);
+	LS ls = LS_new(len);
+	memcpy(ls.data, str, len);
+	ls.len = len;
+	return ls;
+}
+
+void LS_free(LS* ls) {
+	if (!ls) { EXIT(); }
+	free(ls);
+}
+
+void LS_print(LSView ls) {
+	if (!ls.data) return;
+	for (uint32_t i = 0; i < ls.len; i++) {
+		putc(ls.data[i], stdout);
+	}
+	printf("\n");
+}
+uint32_t LS_append(LS* str_dest, LSView str) {
+	if (str_dest->len < str_dest->cap && 
+			str.len < str_dest->cap - str_dest->len) {
+		memcpy(str_dest->data + str_dest->len, str.data, str.len);
+		str_dest->len += str.len;
+		return str.len;
+	} else {
+		return 0;
+	}
+}
+bool LS_append_char(LS* str_dest, char ch) {
+	if (str_dest->len < str_dest->cap) {
+		str_dest->data[str_dest->len] = ch;
+		str_dest->len++;
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
+
+
+// sa
+
+
+uint32_t capacity_for_segment_count(int segment_count) {
+    return ((1 << SMALL_SEGMENTS_TO_SKIP) << segment_count) 
+        - (1 << SMALL_SEGMENTS_TO_SKIP);
+}
+
+void *_sa_get(SegmentArrayInternal *sa, uint32_t index, size_t item_size) {
+    int segment = log2i((index >> SMALL_SEGMENTS_TO_SKIP) + 1);
+    uint32_t slot = index - capacity_for_segment_count(segment);
+    return sa->segments[segment] + item_size*slot;
+}
+
+void *_sa_alloc(SegmentArrayInternal *sa, size_t item_size) {
+    if (sa->count >= capacity_for_segment_count(sa->used_segments)) {
+        size_t slots_in_segment = (1 << SMALL_SEGMENTS_TO_SKIP) << sa->used_segments;
+        size_t segment_size = item_size * slots_in_segment;
+        sa->segments[sa->used_segments] = malloc(segment_size);
+        sa->used_segments++;
+    }
+
+    sa->count++;
+    return _sa_get(sa, sa->count-1, item_size);
+}
+
+
+// allist
+
 bool _ArrList_alloc(ArrListInternal* arr_list, uint32_t cap, size_t item_size) {
 	arr_list->data = malloc(cap * item_size);
 	if (!arr_list->data) { return false; }

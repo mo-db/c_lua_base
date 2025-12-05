@@ -1,5 +1,6 @@
 #pragma once
 #include "core.h"
+#include "hum_ds.h"
 #include "graphics.h"
 
 int wrap_lua_create_level(lua_State* L);
