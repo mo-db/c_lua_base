@@ -1,5 +1,45 @@
 #include "lang_gen.h"
+// blub
+bool arg_block_empty(LSView arg_block) {
+	if (*arg_block.data != '{') { EXIT(); }
 
+	while (*(++arg_block.data) != '}')
+		if (*arg_block.data != ' ') {
+			return false;
+		}
+	return true;
+}
+
+SymbolCategory get_symbol_category(char ch) {
+	if (isalpha(ch)) {
+		return Move;
+	}
+	if (ch == '-' || ch == '+') {
+		return Rotate;
+	}
+	if (ch == '^' || ch == '&') {
+		return Width;
+	}
+	if (ch == '$' || ch == '%') {
+		return Color;
+	}
+	if (ch == '[' || ch == ']') {
+		return Stack;
+	}
+	EXIT();
+}
+
+double get_default(Generator* gen, SymbolCategory cat) {
+	double value = {};
+	switch (cat) {
+		case Move: value = gen->move_default; break;
+		case Rotate: value = gen->rotate_default; break;
+		default: break;
+	}
+	return value;
+}
+
+// gen
 Generator new_generator() {
 	Generator gen = {};
 	SSet_alloc(&gen.vars, 128);
@@ -13,12 +53,14 @@ Generator new_generator() {
 	return gen;
 }
 
-// simpler if i had arena
-void delete_generator(Generator* generator) {
-	SSet_free(&generator->vars);
-	SSet_free(&generator->productions);
-	free(generator);
+void delete_generator(Generator gen) {
+	SSet_free(&gen.vars);
+	SSet_free(&gen.productions);
+	LS_free(gen.replacement_buffer);
+	LS_free(gen.str0);
+	LS_free(gen.str1);
 }
+
 
 // find delim in LS
 bool find_delim(LSView str, char delim, uint32_t* pos) {
@@ -32,20 +74,93 @@ bool find_delim(LSView str, char delim, uint32_t* pos) {
 	return false;
 }
 
+LS cut_args(const LSView view) {
+	char* ch = view.data;
+	char* ls_end = view.data + view.len;
+	LS new_ls = LS_new(view.len);
+	while (ch < ls_end) {
+		if (*ch != '{') {
+			LS_append_char(&new_ls, *ch);
+			ch++;
+		} else {
+			while (ch < ls_end && *ch != '}') { ch++; }
+			ch++;
+		}
+	}
+	return new_ls;
+}
+
+
 // i could use str views instead of memory, just one string and views
-Production parse_production_str(char* str_in) {
-	if (!str_in) { EXIT(); }
+Production parse_production_str(Generator* gen, char* str) {
+	if (!str) { EXIT(); }
 
-	Production prod = {};
-	prod.str = LS_new_from_cstring(str_in);
-	LSView str_view = LS_get_view(prod.str);
-
+	// --- first split ---
 	uint32_t delim_pos = 0;
-	if (!find_delim(str_view, '!', &delim_pos)) { EXIT(); }
-	prod.replacement.data = str_view.data + delim_pos + 1;
-	prod.replacement.len = str_view.len - (delim_pos + 1);
+	if (!find_delim(get_view(str), '!', &delim_pos)) { EXIT(); }
 
+	// --- format replacement ---
+	LSView first_part_view = get_view(str);
+	first_part_view.len = delim_pos;
+	LS repl = LS_new(4096);
+	LSView repl_view = get_view(str + delim_pos + 1);
 
+	char* prepl_end = repl_view.data + repl_view.len;
+	while (repl_view.data < prepl_end) {
+		char symbol = *repl_view.data;
+		if (symbol == ' ') {
+			if (!LSView_offset(&repl_view, 1)) { EXIT(); }
+			continue;
+		}
+		if (symbol == '[' || symbol == ']') {
+			if (!LS_append_char(&repl, symbol)) { EXIT(); }
+			if (!LSView_offset(&repl_view, 1)) { EXIT(); }
+
+			continue;
+		}
+
+		if (repl_view.data + 1 < prepl_end) {
+			if (!LS_append_char(&repl, symbol)) { EXIT(); }
+			if (!LSView_offset(&repl_view, 1)) { EXIT(); }
+
+			if (*repl_view.data != '{') {
+				double default_value = get_default(gen, get_symbol_category(symbol));
+				char new_arg_block[64];
+				new_arg_block[63] = '\0';
+				snprintf(new_arg_block, 64, "{%f}", default_value);
+				if (LS_append(&repl, get_view(new_arg_block)) == 0) { EXIT(); }
+			} else {
+				LSView block = {};
+				if (!get_block(repl_view, '{', &block)) { EXIT(); };
+				printf("block:\n");
+				LS_print(block);
+				printf("empty: %d\n", arg_block_empty(block));
+				if (arg_block_empty(block)) {
+					double default_value = get_default(gen, get_symbol_category(symbol));
+					char new_arg_block[64];
+					new_arg_block[63] = '\0';
+					snprintf(new_arg_block, 64, "{%f}", default_value);
+					if (LS_append(&repl, get_view(new_arg_block)) == 0) { EXIT(); }
+				} else {
+					if (LS_append(&repl, block) == 0) { EXIT(); }
+				}
+				if (!LSView_offset(&repl_view, block.len)) { EXIT(); }
+			}
+		}
+	}
+	Production prod = {};
+	prod.str = LS_new(first_part_view.len + repl.len + 5);
+	if (!LS_append(&prod.str, first_part_view)) { EXIT(); }
+	if (!LS_append_char(&prod.str, '!')) { EXIT(); }
+	if (!LS_append(&prod.str, LS_get_view(repl))) { EXIT(); }
+
+	prod.replacement.data = prod.str.data + first_part_view.len + 1;
+	prod.replacement.len = repl.len;
+
+	LS_free(repl);
+
+	// --- split all other parts ---
+	LSView str_view = LS_get_view(prod.str);
 	str_view.len = delim_pos;
 	if (!find_delim(str_view, ':', &delim_pos)) { 
 		prod.symbol = str_view;
@@ -229,7 +344,7 @@ void reset_generator(Generator* gen) {
 		gen->done_generating = false;
 }
 
-void update_generator(Generator* gen) {
+bool update_generator(Generator* gen) {
 	if (gen->reset_needed) {
 		reset_generator(gen);
 		gen->reset_needed = false;
@@ -239,11 +354,180 @@ void update_generator(Generator* gen) {
 		if (generate_timed(gen)) {
 			gen->done_generating = true;
 
-
 			LS_print(gen->expanded_string);
+			printf("Without args:\n");
+			LS without_args = cut_args(gen->expanded_string);
+			LS_print(LS_get_view(without_args));
+			LS_free(without_args);
 			printf("len: %d\nnew lstring:\n", gen->expanded_string.len);
 			printf("current_iteration: %d\n", gen->current_iteration);
 			printf("\n");
+			return true;
 		}
 	}
+	return false;
+}
+
+
+// --- generation ---
+Interpreter new_interpreter(LSView view, InterpreterState state) {
+	Interpreter inter = {};
+	SSet_alloc(&inter.nodes, 1 << 24);
+	SSet_alloc(&inter.segments, 1 << 24);
+	inter.view = view;
+	inter.state = state;
+	inter.start_state = state;
+	inter.done_building = false;
+	inter.done_redraw = false;
+	return inter;
+}
+
+void delete_interpreter(Interpreter inter) {
+	SSet_free(&inter.nodes);
+	SSet_free(&inter.segments);
+}
+
+// move direction_vector * len
+void _move(InterpreterState* state, const double len) {
+	state->pos.x += len * cos(state->angle);
+	state->pos.y += len * -sin(state->angle);
+}
+
+// rotate value * pi
+void _turn(InterpreterState* state, const double angle) {
+	state->angle += angle * PI;
+}
+
+void _change_width(InterpreterState* state, const double width) {
+	state->width += width; 
+}
+
+void symbol_action(Interpreter* inter, char symbol, double value) {
+	if (isalpha(symbol)) {
+		// update state and push back node
+		_move(&inter->state, value);
+
+		if (!islower(symbol)) {
+			// push node
+			uint32_t node_id = SSet_push_back(&inter->nodes, &inter->state.pos);
+			// push node_id to node_ids_queue
+			inter->state.node_ids_queue[inter->state.queue_head] = node_id;
+			inter->state.queue_head = (inter->state.queue_head + 1) % SEG_MAX_NODES;
+			// if there are enough nodes, push segment
+			if (SSET_LEN(inter->nodes) >= SEG_MAX_NODES) {
+				Segment seg = {};
+				uint32_t queue_tail = inter->state.queue_head + 1;
+				for (int i = 0; i < SEG_MAX_NODES; i++) {
+					seg.node_ids[i] = inter->state.node_ids_queue[(queue_tail + i) % SEG_MAX_NODES];
+				}
+				SSet_push_back(&inter->segments, &seg);
+			}
+		}
+	}
+
+	// turn turtle counter-clockwise
+	else if (symbol == '-') {
+    _turn(&inter->state, -value);
+	}
+	// turn turtle clockwise
+	else if (symbol == '+') {
+    _turn(&inter->state, value);
+	}
+	// TODO: this should either set or change the width
+	else if (symbol == '^') {
+		_change_width(&inter->state, -value);
+	}
+	else if (symbol == '&') {
+		_change_width(&inter->state, value);
+	}
+	// color palette
+	else if (symbol == '$') {
+	}
+	else if (symbol == '%') {
+	}
+	// push and pop turtle state
+	else if (symbol == '[') {
+		if (inter->stack_index >= 4096) { EXIT(); }
+    inter->stack[inter->stack_index++] = inter->state;
+	}
+	else if (symbol == ']') {
+		if (inter->stack_index <= 0) { EXIT(); }
+		inter->state = inter->stack[--inter->stack_index];
+	} else {
+		EXIT();
+	}
+}
+
+
+// ---- building ----
+bool build_timed(Interpreter* inter) {
+
+	LSView local_view = inter->view;
+	if (inter->current_index > 0) {
+		LSView_offset(&local_view, inter->current_index);
+	}
+
+
+	printf("here!\n");
+	LS_print(local_view);
+
+	char* view_end = inter->view.data + inter->view.len;
+
+  while (local_view.data < view_end) {
+
+    // ---- check time ----
+
+		char symbol = *local_view.data;
+		
+		if (local_view.data + 1 < view_end && *(local_view.data + 1) == '{') {
+			LSView block = {};
+			if (!get_block(local_view, '{', &block)) { EXIT(); };
+
+			// convert block to double
+			char value_str[64];
+			memcpy(value_str, block.data + 1, block.len - 1);
+			value_str[63] = '\n';
+			char* end;
+			double value = strtod(value_str, &end);
+
+			printf("symbol action value: %f\n", value);
+
+			symbol_action(inter, symbol, value);
+			if (!LSView_offset(&local_view, block.len + 1)) { EXIT(); }
+		} else if (symbol == ' ') {
+			if (!LSView_offset(&local_view, 1)) { EXIT(); }
+		} else if (symbol == '[' || symbol == ']') {
+				symbol_action(inter, symbol, 0);
+				if (!LSView_offset(&local_view, 1)) { EXIT(); }
+		} else {
+			EXIT();
+		}
+	}
+
+  // ---- expansion completed ----
+  inter->current_index = 0;
+  return true;
+}
+
+
+
+void reset_inter(Interpreter* inter) {
+		inter->current_index = 0;
+		inter->done_building = false;
+}
+
+bool update_inter(Interpreter* inter) {
+	if (inter->reset_needed) {
+		reset_inter(inter);
+		inter->reset_needed = false;
+	}
+
+	
+	if (!inter->done_building) {
+		if (build_timed(inter)) {
+			inter->done_building = true;
+			return true;
+		}
+	}
+	return false;
 }

@@ -20,9 +20,9 @@ LS LS_new_from_cstring(char* str) {
 	return ls;
 }
 
-void LS_free(LS* ls) {
-	if (!ls) { EXIT(); }
-	free(ls);
+void LS_free(LS ls) {
+	if (!ls.data) { EXIT(); }
+	free(ls.data);
 }
 
 void LS_print(LSView ls) {

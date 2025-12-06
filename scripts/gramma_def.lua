@@ -1,8 +1,8 @@
 -- Blueprint for gramma spec file
 
 -- defaults for x. u, w allways default to 0
-action_default    = 0
-rotate_default    = 0
+move_default    = 50
+rotate_default    = 0.2
 width_default     = 0
 palette_default   = 0
 
@@ -23,7 +23,7 @@ k = 0
 -- Symbol (opt)Parameters : (opt)condition : (opt)context -> replacement
 productions = {
   [0] = 'S ! A{}',
-  [1] = 'A{x} : u < 5 : bAB ! A{}[-{}A{}][+{}A{}]',
+  [1] = 'A{x} : u < 5 : bAB ! A[-{}A][+A]',
   -- ...
 }
 

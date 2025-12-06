@@ -13,14 +13,20 @@ typedef struct {
 	uint32_t len;
 } LSView;
 
-LSView static inline LS_get_view(LS ls) {
-	return (LSView){ls.data, ls.len};
-}
-
 uint32_t static inline strlen_save(char* str) {
 	uint32_t len = strnlen(str, UINT32_MAX);
 	if (len == 0 || len == UINT32_MAX) { EXIT(); }
 	return len;
+}
+LSView static inline LS_get_view(LS ls) {
+	return (LSView){ls.data, ls.len};
+}
+
+bool static inline LSView_offset(LSView* view, uint32_t offset) {
+	if (offset == 0 || offset > view->len) { return false; }
+	view->data += offset;
+	view->len -= offset;
+	return true;
 }
 
 LSView static inline get_view(char* str) {
@@ -29,12 +35,25 @@ LSView static inline get_view(char* str) {
 
 LS LS_new(uint32_t cap);
 LS LS_new_from_cstring(char* str);
-void LS_free(LS* ls);
+void LS_free(LS ls);
 
 // returns amount of appended characters, or 0 on failure
 uint32_t LS_append(LS* str_dest, LSView str);
 bool LS_append_char(LS* str_dest, char ch);
 void LS_print(LSView ls);
+
+static inline void LSView_trim(LSView* view) {
+	if (view->len == 0) { return; }
+	while (view->len > 0 && view->data[view->len - 1] == ' ') {
+		view->len--;
+	}
+
+	size_t offset = 0;
+	while (offset < view->len && view->data[offset] == ' ') {
+		++offset;
+	}
+	LSView_offset(view, offset);
+}
 
 
 // sa

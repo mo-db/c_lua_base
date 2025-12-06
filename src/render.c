@@ -261,8 +261,8 @@ void draw_lerp_line_trigon(PixelBuffer *pixelbuffer, IVec2 v0, IVec2 v1,
 
 		if (index_left == length_left || index_right == length_right) { break; }
 	}
-	free(pixels);
 	color_pixels(pixelbuffer, pixels, pixel_count, color);
+	free(pixels);
 }
 
 

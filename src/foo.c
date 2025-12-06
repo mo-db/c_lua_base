@@ -26,6 +26,17 @@ void foo(App* app, Trigon* trigons) {
 void configure_generator(App* app, Generator* gen) {
 	lua_State *L = app->state.L;
 
+	lua_getglobal(L, "move_default");
+	if (lua_isnumber(L, -1)) {
+		gen->move_default =	(double)lua_tonumber(L, -1);
+	}
+	lua_getglobal(L, "rotate_default");
+	if (lua_isnumber(L, -1)) {
+		gen->rotate_default =	(double)lua_tonumber(L, -1);
+	}
+	printf("move: %f, rotate: %f\n", gen->move_default, gen->rotate_default);
+
+
 	// convert lua table to array
 	int size = 0;
 	lua_getglobal(L, "productions_size");
@@ -46,7 +57,7 @@ void configure_generator(App* app, Generator* gen) {
 				printf("no string");
 				return;
 			}
-			Production prod = parse_production_str((char *)lua_tostring(L, -1));
+			Production prod = parse_production_str(gen, (char *)lua_tostring(L, -1));
 			SSet_push_back(&gen->productions, &prod);
 			// result[i] = (char *)lua_tostring(L, -1);
 			// printf("result: %s\n", result[i]);
@@ -60,15 +71,18 @@ void configure_generator(App* app, Generator* gen) {
 	for (int i = 0; i < SSET_LEN(gen->productions); i++) {
 		printf("prod: %d\n", i);
 		Production* prod = SSet_at(&gen->productions, i);
+		LSView_trim(&prod->symbol);
 		LS_print(prod->symbol);
-		printf("\n");
+		LSView_trim(&prod->condition);
 		LS_print(prod->condition);
-		printf("\n");
+		LSView_trim(&prod->context);
 		LS_print(prod->context);
-		printf("\n");
+		LSView_trim(&prod->replacement);
 		LS_print(prod->replacement);
 		printf("\n");
 	}
+
+
 }
 
 bool map_Var_to_SSet(SSet_double* sset, uint32_t* map, Var var) {
@@ -80,24 +94,24 @@ bool map_Var_to_SSet(SSet_double* sset, uint32_t* map, Var var) {
 	return true;
 }
 
-void get_tokens() {
-	printf("### prod ###\n");
-	Production prod = parse_production_str("hallo : blub : adsf ! joda");
-
-
-
-	SSet(double) global_vars;
-	if (!SSet_alloc(&global_vars, 128)) { EXIT(); }
-	uint32_t char_to_id_map[128];
-	Var vars[2] = { (Var){'h', 33}, (Var){'j', 123.123} };
-	for (int i = 0; i < 2; i++) {
-		bool result = map_Var_to_SSet(&global_vars, char_to_id_map, vars[i]);
-		if (!result) { EXIT(); }
-	}
-
-	printf("j: %f\n", *SSet_get(&global_vars, char_to_id_map['j']));
-	printf("h: %f\n", *SSet_get(&global_vars, char_to_id_map['h']));
-}
+// void get_tokens() {
+// 	printf("### prod ###\n");
+// 	Production prod = parse_production_str("hallo : blub : adsf ! joda");
+//
+//
+//
+// 	SSet(double) global_vars;
+// 	if (!SSet_alloc(&global_vars, 128)) { EXIT(); }
+// 	uint32_t char_to_id_map[128];
+// 	Var vars[2] = { (Var){'h', 33}, (Var){'j', 123.123} };
+// 	for (int i = 0; i < 2; i++) {
+// 		bool result = map_Var_to_SSet(&global_vars, char_to_id_map, vars[i]);
+// 		if (!result) { EXIT(); }
+// 	}
+//
+// 	printf("j: %f\n", *SSet_get(&global_vars, char_to_id_map['j']));
+// 	printf("h: %f\n", *SSet_get(&global_vars, char_to_id_map['h']));
+// }
 
 void co_init(App* app) {
 	CoState* co = &(app->state.co);
@@ -159,5 +173,32 @@ void co_update(App* app, double elapsed_time) {
 		if (dyn_object == NULL) { EXIT(); }
 		Vec2 pos = dyn_object->position;
 		draw_rect(app->my_renderer, pos, add_Vec2(pos, (Vec2){50,50}), 0xFFFFFFFF);
+	}
+}
+
+void gen_draw_timed(Interpreter* inter, App* app) {
+	// printf("num segments: %d\n", SSET_LEN(inter->segments));
+
+	// for (uint32_t i = 0; i < SSET_LEN(inter->nodes); i++) {
+	// 	Vec2* pos = SSet_at(&inter->nodes, i);
+	// 	draw_rect(app->my_renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFFFFFFFF);
+	// }
+	for (uint32_t i = 0; i < SSET_LEN(inter->segments); i++) {
+		Segment* seg = SSet_at(&inter->segments, i);
+		if (seg == NULL) { EXIT(); }
+
+		Vec2* pos0 = SSet_at(&inter->nodes, SSet_at(&inter->segments, i)->node_ids[0]);
+		Vec2* pos1 = SSet_at(&inter->nodes, SSet_at(&inter->segments, i)->node_ids[1]);
+		Vec2* pos2 = SSet_at(&inter->nodes, SSet_at(&inter->segments, i)->node_ids[2]);
+
+		draw_trigon(app->my_renderer, *pos0, *pos1, *pos2, 0xFFFFFFFF);
+
+		// draw_rect(app->my_renderer, *pos0, add_Vec2(*pos0, (Vec2){5,5}), 0xFF00FFFF);
+		// draw_rect(app->my_renderer, *pos1, add_Vec2(*pos1, (Vec2){5,5}), 0xFFFF00FF);
+		
+		// draw_thick_line(app->my_renderer,
+		// 		*pos0,
+		// 		*pos1,
+		// 		20.0, 0xFFFFFFFF);
 	}
 }

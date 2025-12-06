@@ -18,3 +18,5 @@ double eval_expression(char* expr);
 void get_tokens();
 
 
+
+void gen_draw_timed(Interpreter* inter, App* app);

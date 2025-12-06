@@ -6,8 +6,8 @@
 #include "regex.h"
 #include "rpn.h"
 
-#define W 640
-#define H 480
+#define W 1080
+#define H 720
 
 
 // bei context-sensitive languages gibt es kein verfahren
@@ -45,11 +45,13 @@ int main() {
 	
 	configure_generator(&app, &gen);
 
+	InterpreterState istate = {};
+	istate.pos = (Vec2){app.width/2, app.height/2};
+	istate.angle = PI / 2;
+	istate.width = 5;
+	Interpreter inter = new_interpreter(gen.expanded_string, istate);
 
-
-
-
-	co_init(&app);
+	// co_init(&app);
 
 
 	// --- foo setup ---
@@ -67,6 +69,8 @@ int main() {
 	uint64_t count = 0;
 	double elapsed_time = 0;
 
+
+
 	while (!app.state.context.quit) {
 		last = now;
 		now = SDL_GetPerformanceCounter();
@@ -81,7 +85,6 @@ int main() {
 		SDL_RenderClear(app.renderer);
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
-
 		// if (became_true(app.state.input.shift)) {
 		// 	app.state.L = reload_lua();
 		// 	configure_generator(&app, &gen);
@@ -92,8 +95,20 @@ int main() {
 			gen.done_generating = false;
 		}
 
-		update_generator(&gen);
+		inter.reset_needed = update_generator(&gen);
 
+		inter.view = gen.expanded_string;
+		inter.redraw_needed = update_inter(&inter);
+		if (inter.done_building) {
+			gen_draw_timed(&inter, &app);
+		}
+
+		Vec2 pos0 = app.state.input.mouse;
+		Vec2 pos1 = {100, 100};
+		draw_thick_line(app.my_renderer,
+				pos0,
+				pos1,
+				5.0, 0xFFFFFFFF);
 
 
 
