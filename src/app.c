@@ -161,3 +161,22 @@ lua_State* reload_lua() {
 	}
 	return L;
 }
+
+void reload_generator_config(lua_State* L) {
+	// lua_State* L = luaL_newstate();
+	// luaL_openlibs(L);
+
+	char* scripts[] = { "scripts/gramma_def.lua" };
+	size_t n_files = sizeof(scripts) / sizeof(char*);
+
+	for (size_t i = 0; i < n_files; i++) {
+		printf("script: %s\n", scripts[i]);
+		if (core_lua_check(L, luaL_dofile(L, scripts[i]))){
+			printf("FUU\n");
+		} else {
+			printf("BUU\n");
+			EXIT();
+		}
+	}
+	// return L;
+}

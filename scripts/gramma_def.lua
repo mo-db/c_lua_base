@@ -1,5 +1,8 @@
 -- Blueprint for gramma spec file
+-- *** interpreter config ***
+segment_node_count = 3
 
+-- *** generator config ***
 -- defaults for x. u, w allways default to 0
 move_default    = 50
 rotate_default    = 0.2

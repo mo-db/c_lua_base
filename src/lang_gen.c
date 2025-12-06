@@ -373,7 +373,7 @@ bool update_generator(Generator* gen) {
 Interpreter new_interpreter(LSView view, InterpreterState state) {
 	Interpreter inter = {};
 	SSet_alloc(&inter.nodes, 1 << 24);
-	SSet_alloc(&inter.segments, 1 << 24);
+	SSet_alloc(&inter.construct, 1 << 24);
 	inter.view = view;
 	inter.state = state;
 	inter.start_state = state;
@@ -384,7 +384,7 @@ Interpreter new_interpreter(LSView view, InterpreterState state) {
 
 void delete_interpreter(Interpreter inter) {
 	SSet_free(&inter.nodes);
-	SSet_free(&inter.segments);
+	SSet_free(&inter.construct);
 }
 
 // move direction_vector * len
@@ -412,15 +412,18 @@ void symbol_action(Interpreter* inter, char symbol, double value) {
 			uint32_t node_id = SSet_push_back(&inter->nodes, &inter->state.pos);
 			// push node_id to node_ids_queue
 			inter->state.node_ids_queue[inter->state.queue_head] = node_id;
-			inter->state.queue_head = (inter->state.queue_head + 1) % SEG_MAX_NODES;
+			inter->state.queue_head =
+				(inter->state.queue_head + 1) % inter->segment_node_count;
 			// if there are enough nodes, push segment
-			if (SSET_LEN(inter->nodes) >= SEG_MAX_NODES) {
+			if (SSET_LEN(inter->nodes) >= inter->segment_node_count) {
 				Segment seg = {};
-				uint32_t queue_tail = inter->state.queue_head + 1;
-				for (int i = 0; i < SEG_MAX_NODES; i++) {
-					seg.node_ids[i] = inter->state.node_ids_queue[(queue_tail + i) % SEG_MAX_NODES];
+				seg.node_count = inter->segment_node_count;
+				uint32_t queue_tail = inter->state.queue_head;
+				for (uint32_t i = 0; i < inter->segment_node_count; i++) {
+					seg.node_ids[i] =
+						inter->state.node_ids_queue[(queue_tail + i) % inter->segment_node_count];
 				}
-				SSet_push_back(&inter->segments, &seg);
+				SSet_push_back(&inter->construct, &seg);
 			}
 		}
 	}
@@ -509,11 +512,18 @@ bool build_timed(Interpreter* inter) {
   return true;
 }
 
-
-
 void reset_inter(Interpreter* inter) {
+	printf("RESET##########\n");
 		inter->current_index = 0;
 		inter->done_building = false;
+		inter->stack_index = 0;
+		inter->state = inter->start_state;
+		SSet_clear(&inter->nodes);
+		SSet_clear(&inter->construct);
+		uint32_t node_id = SSet_push_back(&inter->nodes, &inter->state.pos);
+		inter->state.node_ids_queue[inter->state.queue_head] = node_id;
+		inter->state.queue_head =
+			(inter->state.queue_head + 1) % inter->segment_node_count;
 }
 
 bool update_inter(Interpreter* inter) {

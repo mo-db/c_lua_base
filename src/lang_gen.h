@@ -81,6 +81,7 @@ typedef struct {
 
 typedef struct {
 	uint32_t node_ids[SEG_MAX_NODES];
+	uint32_t node_count;
 } Segment;
 
 SSET_DEFINE(SSet_Vec2, Vec2);
@@ -91,11 +92,8 @@ typedef struct {
 	uint32_t current_index;
 
 	SSet_Vec2 nodes;
-	SSet_Segment segments;
-	Segment temp_seg;
-	uint32_t temp_seg_nodes;
-
-
+	SSet_Segment construct;
+	uint32_t segment_node_count;
 
 	InterpreterState state;
 	InterpreterState start_state;

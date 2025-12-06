@@ -9,7 +9,7 @@
 #define N_TRIGONS 200
 
 void foo(App* app, Trigon* trigons);
-void configure_generator(App* app, Generator* gen);
+void configure_generator(App* app, Generator* gen, Interpreter* inter);
 
 void co_init(App* app);
 void co_update(App* app, double elapsed_time);

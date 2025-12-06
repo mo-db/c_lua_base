@@ -89,3 +89,4 @@ void update_viewport(State* state, Viewport* viewport);
 // lua
 // void update_lua_State(State* state);
 lua_State* reload_lua();
+void reload_generator_config(lua_State* L);

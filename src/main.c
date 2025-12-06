@@ -42,14 +42,15 @@ int main() {
 
 
 	Generator gen = new_generator();
-	
-	configure_generator(&app, &gen);
 
 	InterpreterState istate = {};
-	istate.pos = (Vec2){app.width/2, app.height/2};
+	istate.pos = (Vec2){(float)app.width/2, (float)app.height/2};
 	istate.angle = PI / 2;
-	istate.width = 5;
+	istate.width = 5.0;
+	istate.queue_head = 0;
 	Interpreter inter = new_interpreter(gen.expanded_string, istate);
+
+	configure_generator(&app, &gen, &inter);
 
 	// co_init(&app);
 
@@ -85,11 +86,13 @@ int main() {
 		SDL_RenderClear(app.renderer);
 		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
-		// if (became_true(app.state.input.shift)) {
-		// 	app.state.L = reload_lua();
-		// 	configure_generator(&app, &gen);
-		// }
-		//
+		if (became_true(app.state.input.shift)) {
+			reload_generator_config(app.state.L);
+			// app.state.L = reload_lua();
+			// configure_generator(&app, &gen, &inter);
+			gen.reset_needed = true;
+		}
+
 		if (became_true(app.state.input.ctrl)) {
 			gen.iterations++;
 			gen.done_generating = false;
@@ -102,14 +105,6 @@ int main() {
 		if (inter.done_building) {
 			gen_draw_timed(&inter, &app);
 		}
-
-		Vec2 pos0 = app.state.input.mouse;
-		Vec2 pos1 = {100, 100};
-		draw_thick_line(app.my_renderer,
-				pos0,
-				pos1,
-				5.0, 0xFFFFFFFF);
-
 
 
 		// co_update(&app, elapsed_time);

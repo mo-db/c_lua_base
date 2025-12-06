@@ -23,7 +23,7 @@ void foo(App* app, Trigon* trigons) {
 }
 
 
-void configure_generator(App* app, Generator* gen) {
+void configure_generator(App* app, Generator* gen, Interpreter* inter) {
 	lua_State *L = app->state.L;
 
 	lua_getglobal(L, "move_default");
@@ -36,6 +36,10 @@ void configure_generator(App* app, Generator* gen) {
 	}
 	printf("move: %f, rotate: %f\n", gen->move_default, gen->rotate_default);
 
+	lua_getglobal(L, "segment_node_count");
+	if (lua_isnumber(L, -1)) {
+		inter->segment_node_count =	(double)lua_tonumber(L, -1);
+	}
 
 	// convert lua table to array
 	int size = 0;
@@ -65,7 +69,6 @@ void configure_generator(App* app, Generator* gen) {
 			EXIT();
 		}
 	}
-	gen->reset_needed = true;
 
 	// TEST
 	for (int i = 0; i < SSET_LEN(gen->productions); i++) {
@@ -177,28 +180,34 @@ void co_update(App* app, double elapsed_time) {
 }
 
 void gen_draw_timed(Interpreter* inter, App* app) {
-	// printf("num segments: %d\n", SSET_LEN(inter->segments));
 
 	// for (uint32_t i = 0; i < SSET_LEN(inter->nodes); i++) {
 	// 	Vec2* pos = SSet_at(&inter->nodes, i);
-	// 	draw_rect(app->my_renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFFFFFFFF);
+	// 	draw_rect(app->my_renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFF00FFFF);
 	// }
-	for (uint32_t i = 0; i < SSET_LEN(inter->segments); i++) {
-		Segment* seg = SSet_at(&inter->segments, i);
-		if (seg == NULL) { EXIT(); }
+	// return;
 
-		Vec2* pos0 = SSet_at(&inter->nodes, SSet_at(&inter->segments, i)->node_ids[0]);
-		Vec2* pos1 = SSet_at(&inter->nodes, SSet_at(&inter->segments, i)->node_ids[1]);
-		Vec2* pos2 = SSet_at(&inter->nodes, SSet_at(&inter->segments, i)->node_ids[2]);
+	for (uint32_t i = 0; i < SSET_LEN(inter->construct); i++) {
+		Segment* seg = SSet_at(&inter->construct, i);
 
-		draw_trigon(app->my_renderer, *pos0, *pos1, *pos2, 0xFFFFFFFF);
-
-		// draw_rect(app->my_renderer, *pos0, add_Vec2(*pos0, (Vec2){5,5}), 0xFF00FFFF);
-		// draw_rect(app->my_renderer, *pos1, add_Vec2(*pos1, (Vec2){5,5}), 0xFFFF00FF);
-		
-		// draw_thick_line(app->my_renderer,
-		// 		*pos0,
-		// 		*pos1,
-		// 		20.0, 0xFFFFFFFF);
+		if (seg->node_count == 1) {
+			Vec2* pos = SSet_at(&inter->nodes, seg->node_ids[0]);
+			draw_rect(app->my_renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFF00FFFF);
+		}
+		else if (seg->node_count == 2) {
+			Vec2* pos0 = SSet_at(&inter->nodes, seg->node_ids[0]);
+			Vec2* pos1 = SSet_at(&inter->nodes, seg->node_ids[1]);
+			draw_thick_line(app->my_renderer, *pos0,*pos1,
+											20.0, 0xFF00FFFF);
+		}
+		else if (seg->node_count == 3) {
+			Vec2* pos0 = SSet_at(&inter->nodes, seg->node_ids[0]);
+			Vec2* pos1 = SSet_at(&inter->nodes, seg->node_ids[1]);
+			Vec2* pos2 = SSet_at(&inter->nodes, seg->node_ids[2]);
+			draw_trigon(app->my_renderer, *pos0, *pos1, *pos2, 0xFF00FFFF);
+		}
+		else {
+			EXIT();
+		}
 	}
 }
