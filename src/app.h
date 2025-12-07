@@ -2,6 +2,7 @@
 #pragma once
 
 #include "core.h"
+#include "hum_lua.h"
 #include "graphics.h"
 #include "render.h"
 

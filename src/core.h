@@ -5,10 +5,9 @@
 #include <luajit-2.1/lauxlib.h>
 #include <luajit-2.1/lualib.h>
 #include <luajit-2.1/luajit.h>
-#include <tree_sitter/api.h>
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <pcre2.h>
-
+// #include <tree_sitter/api.h>
+// #define PCRE2_CODE_UNIT_WIDTH 8
+// #include <pcre2.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -17,12 +16,15 @@
 #include <math.h>
 #include <string.h>
 
-#define MIN(a, b) ((a) > (b) ? (b) : (a))
-#define MAX(a, b) ((a) < (b) ? (b) : (a))
-
+// --- essential globals ---
 #define PI 3.14159265359
 #define EPSILON 1e-6
 
+// --- function-like helper macros ---
+#define MIN(a, b) ((a) > (b) ? (b) : (a))
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
+
+// --- debug macros ---
 #define EXIT()\
 	do {\
 		fprintf(stderr,"ERROR [%s:%d] %s()\n",\
@@ -37,9 +39,7 @@
 		exit(EXIT_FAILURE);\
 	} while (0)
 
-bool core_lua_check(lua_State *L, int result);
-bool core_epsilon_equal(double x, double y);
-
-
-
-
+// --- inline functions, no loops or recursion, must be small ---
+static inline bool core_epsilon_equal(double x, double y) {
+	return (x < y + EPSILON && x > y - EPSILON);
+}

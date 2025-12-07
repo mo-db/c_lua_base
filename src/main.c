@@ -3,12 +3,10 @@
 #include "graphics.h"
 #include "render.h"
 #include "foo.h"
-#include "regex.h"
 #include "rpn.h"
 
 #define W 1080
 #define H 720
-
 
 // bei context-sensitive languages gibt es kein verfahren
 // welches entscheiden kann ob ein wort in der sprache ist
@@ -19,27 +17,7 @@ int main() {
 	App app = {};
 	app_init(&app, W, H);
 
-
-
-	// lua_register(app.state.L, "lua_create_level", wrap_lua_create_level);
-
 	app.state.L = reload_lua();
-
-	// char* pattern = "a*b";
-	// char* subject = "ccccaxxbccccabcaxbcccc";
-
-	// regex_match(pattern, subject);
-
-	char* expr = "9 9 9 /";
-	RPNState rpn = {};
-	bool error = false;
-	double result = eval_rpn(&rpn, expr, &error);
-	if (error) {
-		printf("EXPRESSION WRONG: rpn_eval error\n");
-	} else {
-		printf("result: %f\n", result);
-	}
-
 
 	Generator gen = new_generator();
 
@@ -88,8 +66,7 @@ int main() {
 
 		if (became_true(app.state.input.shift)) {
 			reload_generator_config(app.state.L);
-			// app.state.L = reload_lua();
-			// configure_generator(&app, &gen, &inter);
+			configure_generator(&app, &gen, &inter);
 			gen.reset_needed = true;
 		}
 
@@ -127,6 +104,7 @@ int main() {
 		// uint64_t count = SDL_GetPerformanceFrequency();
 		// printf("elapsed: %f\n", ((double)(end-start)/count) * 1000);
 
+		// --- *** SDL flip screen texture *** ---
 		SDL_UpdateTexture(app.window_texture, NULL, app.my_renderer->pixelbuffer.pixels,
 											app.width * 4);
 		SDL_RenderTexture(app.renderer, app.window_texture, NULL, NULL);

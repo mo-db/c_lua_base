@@ -2,14 +2,12 @@
 
 void foo(App* app, Trigon* trigons) {
 	lua_State *L = app->state.L;
-	int width = app->my_renderer->pixelbuffer.width;
-	int height = app->my_renderer->pixelbuffer.height;
 
 	lua_getglobal(L, "MV");
 	if (lua_isfunction(L, -1)) {
 		lua_pushnumber(L, N_TRIGONS);
 		lua_pushlightuserdata(L, trigons);
-		if (core_lua_check(L, lua_pcall(L, 2, 1, 0))) {
+		if (lua_check(L, lua_pcall(L, 2, 1, 0))) {
 			printf("success\n");
 		} else {
 			printf("huh?\n");
@@ -137,7 +135,7 @@ void co_init(App* app) {
 	if (lua_isfunction(L, -1)) {
 		lua_pushlightuserdata(L, co);
 		lua_pushnumber(L, 1);
-		if (core_lua_check(L, lua_pcall(L, 2, 1, 0))) {
+		if (lua_check(L, lua_pcall(L, 2, 1, 0))) {
 			printf("success\n");
 		} else {
 			printf("huh?\n");

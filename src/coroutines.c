@@ -93,7 +93,7 @@ bool update_manips(CoState* co, lua_State* L, float elapsed_time) {
 			if(lua_isfunction(L, -1)) {
 				lua_pushlightuserdata(L, co);
 				lua_pushnumber(L, manip->dyn_object_id);
-				if (core_lua_check(L, lua_pcall(L, 2, 1, 0))) {
+				if (lua_check(L, lua_pcall(L, 2, 1, 0))) {
 				} else {
 					EXIT();
 				}
