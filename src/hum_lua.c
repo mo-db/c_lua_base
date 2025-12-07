@@ -9,6 +9,17 @@ bool lua_check(lua_State *L, int result) {
 	return true;
 }
 
+void lua_reload_file(lua_State* L, const char* file_name) {
+	if (!lua_check(L, luaL_dofile(L, file_name))) {
+		EXIT();
+	}
+}
+
+void lua_register_function(lua_State *L, int func(lua_State *),
+                           const char *global_name) {
+  lua_pushcfunction(L, func);
+	lua_setglobal(L, global_name);
+}
 
 bool lua_table_number_at(lua_State *L, const uint32_t index, double* value) {
 	/* push the key onto the stack */

@@ -1,9 +1,11 @@
-#include "core.h"
 #include "app.h"
 #include "graphics.h"
 #include "render.h"
 #include "foo.h"
 #include "rpn.h"
+#include "hum_ds.h"
+
+#include "core.h"
 
 #define W 1080
 #define H 720
@@ -16,19 +18,19 @@
 int main() {
 	App app = {};
 	app_init(&app, W, H);
-
 	app.state.L = reload_lua();
 
-	Generator gen = new_generator();
+	LManager lmanager = LManager_new();
 
-	InterpreterState istate = {};
-	istate.pos = (Vec2){(float)app.width/2, (float)app.height/2};
-	istate.angle = PI / 2;
-	istate.width = 5.0;
-	istate.queue_head = 0;
-	Interpreter inter = new_interpreter(gen.expanded_string, istate);
+	// reload lua lsystem config
+	lua_reload_file(app.state.L, "scripts/gramma_def.lua");
+	lua_register_function(app.state.L, ladd_generator, "_add_generator");
+	lua_register_function(app.state.L, lremove_generator, "_remove_generator");
+	lua_register_function(app.state.L, ladd_builder, "_add_builder");
+	lua_register_function(app.state.L, lremove_builder, "_remove_builder");
 
-	configure_generator(&app, &gen, &inter);
+	// calls the lua function
+	LManager_init_from_config(app.state.L, &lmanager);
 
 	// co_init(&app);
 
@@ -75,13 +77,103 @@ int main() {
 			gen.done_generating = false;
 		}
 
-		inter.reset_needed = update_generator(&gen);
 
-		inter.view = gen.expanded_string;
-		inter.redraw_needed = update_inter(&inter);
-		if (inter.done_building) {
-			gen_draw_timed(&inter, &app);
+		TimeState gen_state = update_gen();
+
+		bool out_of_time = false;
+		switch (gen_state) {
+			case IDLE:
+				if (!reset_generator) {
+					break;
+				}
+				do_reset_generator(); // reset_generator == false
+				gen_state = WORKING;
+			case WORKING:
+				if (reset_generator) {
+					do_reset_generator();
+				}
+				if (!expand()) {
+					out_of_time = true;
+					break;
+				}
+				// mark all registered interpreters for reset
+				for (size_t i = 0; i < SSET_LEN(inters); i++) {
+					Interpreter *inter = SSet_at(&inters, i);
+					if (inter->bind_to_generator) {
+						inter->view = gen.expanded_string;
+						inter->reset_needed = true;
+					}
+				}
+				gen_state = IDLE;
+				break;
+			default: EXIT();
 		}
+
+		typedef enum {
+			INTER_IDLE,
+			BUILDING,
+		} InterState;
+
+		TimeState inter_state = IDLE;
+
+		for (size_t i = 0; i < SSET_LEN(inters); i++) {
+			if (!out_of_time) {
+				switch(inter_state) {
+					case IDLE:
+						if (!inter_reset_needed) {
+							break;
+						}
+						do_reset_inter(); // inter_reset_needed = false
+						inter_state = WORKING;	
+					case WORKING:
+						if (inter_reset_needed) {
+							do_reset_inter();
+						}
+						if (!build()) {
+							out_of_time = true;
+							break;
+						}
+						redraw_all = true;
+						inter_state = IDLE;
+						break;
+					default: EXIT();
+				}
+			}
+
+			// draw constructs into buffer
+			if (!out_of_time) {
+				// need to redraw_all objects if i zoom or pan or change pos
+				if (redraw_all) {
+				}
+				if (!draw_inter()) {
+					out_of_time = true;
+				} else {
+					draw_completed_count = (draw_completed_count + 1) % SSET_LEN(inters);
+				}
+
+				switch (drawer_state) {
+					case IDLE: 
+						if (!redraw_all) {
+							break;
+						}
+						do_reset_drawer(); // = false
+						drawer_state = WORKING;	
+					case WORKING:
+						if (redraw_all) {
+							do_reset_drawer();
+						}
+						if (!draw_construct()) {
+							out_of_time = true;
+							break;
+						}
+						drawer_state = IDLE;
+						break;
+					default: EXIT();
+				}
+			}
+		}
+
+
 
 
 		// co_update(&app, elapsed_time);

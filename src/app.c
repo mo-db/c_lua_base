@@ -162,14 +162,4 @@ lua_State* reload_lua() {
 	return L;
 }
 
-void reload_generator_config(lua_State* L) {
-	char* scripts[] = { "scripts/gramma_def.lua" };
-	size_t n_files = sizeof(scripts) / sizeof(char*);
 
-	for (size_t i = 0; i < n_files; i++) {
-		printf("script: %s\n", scripts[i]);
-		if (!lua_check(L, luaL_dofile(L, scripts[i]))){
-			EXIT();
-		}
-	}
-}

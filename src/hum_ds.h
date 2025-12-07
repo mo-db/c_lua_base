@@ -217,6 +217,7 @@ static void name##_free(name* s) {                                           \
     free(s);                                                                 \
 }
 
+// TODO: make item not a pointer
 uint32_t _SSet_push_back(SSetInternal* sset, void* item, size_t item_size); 
 #define SSet_push_back(sset, item) \
 	(_SSet_push_back(&(sset)->internal, \
