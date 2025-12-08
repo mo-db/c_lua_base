@@ -3,24 +3,27 @@
 void foo(App* app, Trigon* trigons) {
 	lua_State *L = app->state.L;
 
-	lua_getglobal(L, "MV");
-	if (lua_isfunction(L, -1)) {
-		lua_pushnumber(L, N_TRIGONS);
-		lua_pushlightuserdata(L, trigons);
-		if (lua_check(L, lua_pcall(L, 2, 1, 0))) {
-			printf("success\n");
-		} else {
-			printf("huh?\n");
-		}
-	}
+	// lua_getglobal(L, "MV");
+	// if (lua_isfunction(L, -1)) {
+	// 	lua_pushnumber(L, N_TRIGONS);
+	// 	lua_pushlightuserdata(L, trigons);
+	// 	if (lua_check(L, lua_pcall(L, 2, 1, 0))) {
+	// 		printf("success\n");
+	// 	} else {
+	// 		printf("huh?\n");
+	// 	}
+	// }
 
 	for (int i = 0; i < N_TRIGONS; i++) {
 		Trigon tr = trigons[i];
 		draw_trigon(app->my_renderer, tr.a, tr.b, tr.c, (int)(SDL_randf() * (float)0xFFFFFFFF));
+		// draw_rect(app->my_renderer, (Vec2){300, 300}, (Vec2){700, 700}, 0xFFFFFFFF);
+		// draw_rect_test(app->my_renderer, (Vec2){300, 300}, (Vec2){700, 700}, 0xFFFFFFFF);
+		// draw_trigon(app->my_renderer, (Vec2){300, 300}, (Vec2){700, 700}, (Vec2){100, 900}, 0xFF00FFFF);
 	}
 }
 
-
+/*
 void configure_generator(App* app, Generator* gen, Interpreter* inter) {
 	lua_State *L = app->state.L;
 
@@ -82,18 +85,10 @@ void configure_generator(App* app, Generator* gen, Interpreter* inter) {
 		LS_print(prod->replacement);
 		printf("\n");
 	}
-
-
 }
+*/
 
-bool map_Var_to_SSet(SSet_double* sset, uint32_t* map, Var var) {
-	uint32_t id = SSet_push_back(sset, &var.value);
-	if (id == UINT32_MAX) {
-		return false;
-	}
-	map[(uint32_t)var.ch] = id;
-	return true;
-}
+
 
 // void get_tokens() {
 // 	printf("### prod ###\n");
@@ -174,38 +169,5 @@ void co_update(App* app, double elapsed_time) {
 		if (dyn_object == NULL) { EXIT(); }
 		Vec2 pos = dyn_object->position;
 		draw_rect(app->my_renderer, pos, add_Vec2(pos, (Vec2){50,50}), 0xFFFFFFFF);
-	}
-}
-
-void gen_draw_timed(Interpreter* inter, App* app) {
-
-	// for (uint32_t i = 0; i < SSET_LEN(inter->nodes); i++) {
-	// 	Vec2* pos = SSet_at(&inter->nodes, i);
-	// 	draw_rect(app->my_renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFF00FFFF);
-	// }
-	// return;
-
-	for (uint32_t i = 0; i < SSET_LEN(inter->construct); i++) {
-		Segment* seg = SSet_at(&inter->construct, i);
-
-		if (seg->node_count == 1) {
-			Vec2* pos = SSet_at(&inter->nodes, seg->node_ids[0]);
-			draw_rect(app->my_renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFF00FFFF);
-		}
-		else if (seg->node_count == 2) {
-			Vec2* pos0 = SSet_at(&inter->nodes, seg->node_ids[0]);
-			Vec2* pos1 = SSet_at(&inter->nodes, seg->node_ids[1]);
-			draw_thick_line(app->my_renderer, *pos0,*pos1,
-											20.0, 0xFF00FFFF);
-		}
-		else if (seg->node_count == 3) {
-			Vec2* pos0 = SSet_at(&inter->nodes, seg->node_ids[0]);
-			Vec2* pos1 = SSet_at(&inter->nodes, seg->node_ids[1]);
-			Vec2* pos2 = SSet_at(&inter->nodes, seg->node_ids[2]);
-			draw_trigon(app->my_renderer, *pos0, *pos1, *pos2, 0xFF00FFFF);
-		}
-		else {
-			EXIT();
-		}
 	}
 }

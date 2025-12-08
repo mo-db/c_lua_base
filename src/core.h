@@ -43,3 +43,13 @@
 static inline bool core_epsilon_equal(double x, double y) {
 	return (x < y + EPSILON && x > y - EPSILON);
 }
+
+static inline bool time_limit_reached(uint64_t frame_start, double frame_time) {
+  uint64_t now = SDL_GetPerformanceCounter();
+  double elapsed =
+      ((double)(now - frame_start) / SDL_GetPerformanceFrequency()) * 1000;
+  if (elapsed >= frame_time * 0.9) {
+    return true;
+  }
+  return false;
+}

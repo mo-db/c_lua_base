@@ -7,13 +7,14 @@
 
 #include "core.h"
 
-#define W 1080
-#define H 720
+#define W 940
+#define H 520
 
 // bei context-sensitive languages gibt es kein verfahren
 // welches entscheiden kann ob ein wort in der sprache ist
 // -> bei context-frei gibt es den CYK algorithmus
 // -> deswegen pumpinglemma 2 zur unterscheidung
+
 
 int main() {
 	App app = {};
@@ -31,20 +32,29 @@ int main() {
 
 	// calls the lua function
 	LManager_init_from_config(app.state.L, &lmanager);
+	printf("builders_len: %d, generators_len: %d\n", 
+			SSET_LEN(lmanager.builders), SSET_LEN(lmanager.generators));
+
+	reconfigure_system(app.state.L, &lmanager);
 
 	// co_init(&app);
 
 
-	// --- foo setup ---
-	// Trigon trigons[N_TRIGONS];
-	// for (int i = 0; i < N_TRIGONS; i++) {
-	// 	float ran = SDL_randf() * 500;
-	// 	for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
-	// 		trigons[i].v[j] = (Vec2){(-SDL_randf() + 0.5) * ran * i,
-	// 			(-SDL_randf() + 0.5) * ran * i};
-	// 	}
-	// }
-	
+//	--- foo setup ---
+	Trigon trigons[N_TRIGONS];
+	for (int i = 0; i < N_TRIGONS; i++) {
+		float ran = SDL_randf();
+
+		trigons[i] = (Trigon){(Vec2){0, 0},
+			(Vec2){(double)app.width, (double)app.height * ran},
+			(Vec2){(double)app.width * ran, (double)app.height}};
+
+		for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
+			// trigons[i].v[j] = (Vec2){(-SDL_randf() + 0.5) * ran * i,
+			// 	(-SDL_randf() + 0.5) * ran * i};
+
+		}
+	}
 	uint64_t now = SDL_GetPerformanceCounter();
 	uint64_t last = SDL_GetPerformanceCounter();
 	uint64_t count = 0;
@@ -64,125 +74,39 @@ int main() {
 		// update_lua_State(&app.state);
 		SDL_SetRenderDrawColor(app.renderer, 0, 0, 0, 255);
 		SDL_RenderClear(app.renderer);
-		renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
+		// renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
+
+		// reconfigure system
 		if (became_true(app.state.input.shift)) {
-			reload_generator_config(app.state.L);
-			configure_generator(&app, &gen, &inter);
-			gen.reset_needed = true;
+			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
+			// copy all the config values into the generators and builders
+			SSet_at(&lmanager.generators, 0)->iterations++;
+			reconfigure_system(app.state.L, &lmanager);
 		}
 
-		if (became_true(app.state.input.ctrl)) {
-			gen.iterations++;
-			gen.done_generating = false;
-		}
+		// reinit system
 
+		// if (became_true(app.state.input.ctrl)) {
+		// 	gen.iterations++;
+		// 	gen.done_generating = false;
+		// }
 
-		TimeState gen_state = update_gen();
+		uint64_t now = SDL_GetPerformanceCounter();
 
-		bool out_of_time = false;
-		switch (gen_state) {
-			case IDLE:
-				if (!reset_generator) {
-					break;
-				}
-				do_reset_generator(); // reset_generator == false
-				gen_state = WORKING;
-			case WORKING:
-				if (reset_generator) {
-					do_reset_generator();
-				}
-				if (!expand()) {
-					out_of_time = true;
-					break;
-				}
-				// mark all registered interpreters for reset
-				for (size_t i = 0; i < SSET_LEN(inters); i++) {
-					Interpreter *inter = SSet_at(&inters, i);
-					if (inter->bind_to_generator) {
-						inter->view = gen.expanded_string;
-						inter->reset_needed = true;
-					}
-				}
-				gen_state = IDLE;
-				break;
-			default: EXIT();
-		}
+		bool out_of_time = update_lsystem(app.my_renderer, &lmanager, elapsed_time, now);
 
-		typedef enum {
-			INTER_IDLE,
-			BUILDING,
-		} InterState;
-
-		TimeState inter_state = IDLE;
-
-		for (size_t i = 0; i < SSET_LEN(inters); i++) {
-			if (!out_of_time) {
-				switch(inter_state) {
-					case IDLE:
-						if (!inter_reset_needed) {
-							break;
-						}
-						do_reset_inter(); // inter_reset_needed = false
-						inter_state = WORKING;	
-					case WORKING:
-						if (inter_reset_needed) {
-							do_reset_inter();
-						}
-						if (!build()) {
-							out_of_time = true;
-							break;
-						}
-						redraw_all = true;
-						inter_state = IDLE;
-						break;
-					default: EXIT();
-				}
-			}
-
-			// draw constructs into buffer
-			if (!out_of_time) {
-				// need to redraw_all objects if i zoom or pan or change pos
-				if (redraw_all) {
-				}
-				if (!draw_inter()) {
-					out_of_time = true;
-				} else {
-					draw_completed_count = (draw_completed_count + 1) % SSET_LEN(inters);
-				}
-
-				switch (drawer_state) {
-					case IDLE: 
-						if (!redraw_all) {
-							break;
-						}
-						do_reset_drawer(); // = false
-						drawer_state = WORKING;	
-					case WORKING:
-						if (redraw_all) {
-							do_reset_drawer();
-						}
-						if (!draw_construct()) {
-							out_of_time = true;
-							break;
-						}
-						drawer_state = IDLE;
-						break;
-					default: EXIT();
-				}
-			}
-		}
-
+		// foo(&app, trigons);
+		double elapsed =
+			((double)(SDL_GetPerformanceCounter() - now) / SDL_GetPerformanceFrequency()) * 1000;
+		 printf("foo-time: %f\n", elapsed);
 
 
 
 		// co_update(&app, elapsed_time);
 
 
-
 		// printf("elapsed: %f\n", ((double)(now-last)/count) * 1000);
-
-
 
 
 		// bar(&app);
@@ -191,7 +115,6 @@ int main() {
 
 		// --- foo ---
 		// uint64_t start = SDL_GetPerformanceCounter();
-		// foo(&app, trigons);
 		// uint64_t end = SDL_GetPerformanceCounter();
 		// uint64_t count = SDL_GetPerformanceFrequency();
 		// printf("elapsed: %f\n", ((double)(end-start)/count) * 1000);

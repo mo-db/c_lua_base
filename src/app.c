@@ -50,6 +50,9 @@ bool app_init(App* app, int width, int height) {
 	app->my_renderer = new_renderer(app->width, app->height);
 	renderer_clear(&app->my_renderer->pixelbuffer, 0xFF000000);
 
+	app->render_buff = new_renderer(app->width, app->height);
+	renderer_clear(&app->render_buff->pixelbuffer, 0xFF000000);
+
 	// --- lua ---
 	app->state.L = luaL_newstate();
 	luaL_openlibs(app->state.L);

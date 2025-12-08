@@ -14,6 +14,11 @@ typedef enum  {
 
 
 // --- generation ---
+typedef enum {
+	WORKING,
+	IDLE,
+} TimeState;
+
 
 typedef struct {
 	char ch;
@@ -32,6 +37,7 @@ SSET_DEFINE(SSet_double, double);
 SSET_DEFINE(SSet_production, Production);
 
 typedef struct {
+	TimeState state;
 	SSet_double vars;
 	uint32_t char_id_map[256];
 	SSet_production productions;
@@ -54,14 +60,15 @@ typedef struct {
 
 } Generator;
 
-char* gen_iterate();
+bool generator_add_var(SSet_double* sset, uint32_t* map, double value, char ch);
+double *generator_get_var_value(SSet_double* sset, uint32_t* map, char ch);
 
-bool map_Var_to_SSet(SSet_double* sset, uint32_t* map, Var var);
 
-Production parse_production_str(Generator* gen, char* str_in);
+Production parse_production_str(Generator* gen, const char* str_in);
 
 Generator new_generator();
-
+void reset_generator(Generator* gen);
+bool generate_timed(Generator* gen, double frame_time, uint64_t frame_start);
 
 
 bool get_block(LSView str, char delim, LSView* block);
@@ -87,12 +94,10 @@ typedef struct {
 SSET_DEFINE(SSet_Vec2, Vec2);
 SSET_DEFINE(SSet_Segment, Segment);
 
-typedef enum {
-	WORKING,
-	IDLE,
-} TimeState;
-
 typedef struct {
+	TimeState state;
+	TimeState draw_state;
+	uint32_t generator_id;
 	LSView view;
 	uint32_t current_index;
 
@@ -100,23 +105,28 @@ typedef struct {
 	SSet_Segment construct;
 	uint32_t segment_node_count;
 
-	BuilderState state; // TODO, change fetch config lua
+	BuilderState build_state; // TODO, change fetch config lua
 	BuilderState start_state;
 	BuilderState stack[4096];
 	uint32_t stack_index;
 
   bool reset_needed;
 	bool redraw_needed;
+	uint32_t current_construct_index; // for drawing
+
 	bool done_redraw;
   bool done_building;
 } Builder;
 
 
-Builder new_interpreter(LSView view, BuilderState state);
-bool update_inter(Builder* inter);
+void builder_add_node(Builder *builder , Vec2 *node);
+void reset_builder(Builder* builder);
+void reset_builder_draw(Builder *builder);
 
-// inter just temp herer
-bool update_generator(Generator* gen);
+Builder new_builder();
+
+bool build_timed(Builder* builder, double frame_time, uint64_t frame_start);
+bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_t frame_start);
 
 SSET_DEFINE(SSetGenerator, Generator);
 SSET_DEFINE(SSetBuilder, Builder);
@@ -129,6 +139,12 @@ typedef struct {
 
 LManager LManager_new();
 void LManager_delete(LManager* manager);
+
+bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, uint64_t frame_start);
+void reconfigure_system(lua_State *L, LManager *manager);
+
+// also clear buffer somehow
+void redraw_all(LManager *manager);
 
 void LManager_init_from_config(lua_State* L, LManager* manager);
 

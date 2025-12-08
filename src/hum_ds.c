@@ -1,8 +1,6 @@
 #include "hum_ds.h"
 
 // LS
-
-
 LS LS_new(uint32_t cap) {
 	LS ls = {};
 	ls.data = malloc(cap);
@@ -12,7 +10,7 @@ LS LS_new(uint32_t cap) {
 	return ls;
 }
 
-LS LS_new_from_cstring(char* str) {
+LS LS_new_from_cstring(const char* str) {
 	uint32_t len = strlen_save(str);
 	LS ls = LS_new(len);
 	memcpy(ls.data, str, len);
@@ -23,6 +21,10 @@ LS LS_new_from_cstring(char* str) {
 void LS_free(LS ls) {
 	if (!ls.data) { EXIT(); }
 	free(ls.data);
+}
+
+void LS_clear(LS* ls) {
+	ls->len = 0;
 }
 
 void LS_print(LSView ls) {
@@ -212,6 +214,12 @@ void* _SSet_get(SSetInternal* sset, uint32_t sparse_index, size_t item_size) {
 		return NULL;
 	}
 	uint32_t dense_position = sset->sparse[sparse_index];
+
+	// check if item was freed
+	if (dense_position == sset->cap) {
+		return NULL;
+	}
+	// else return pointer to item
 	return sset->dense + dense_position * item_size;
 }
 
@@ -259,7 +267,142 @@ bool _SSet_remove(SSetInternal* sset, uint32_t sparse_index_remove_item, size_t 
 
 		// push the free sparse_index onto the stack
 		sset->sparse_free_stack[sset->free_stack_len++] = sparse_index_remove_item;
+		// mark sparse as free
+		sset->sparse[sparse_index_remove_item] = sset->cap;
 	}
 	sset->len--;
 	return true;
+}
+
+
+
+// --- *** sset that takes pointers to malloced objects ***
+bool _SS_realloc(SSInternal* ss) {
+	if (ss->cap == 0) {
+		ss->cap = 1 << REALLOC_BITS_TO_SKIP;
+	} else {
+		if ( ss->cap >= UINT32_MAX / (sizeof(void *) * 2)) { return false; }
+		ss->cap <<= 1;
+	}
+
+	ss->dense = realloc(ss->dense, ss->cap * sizeof(void *));
+	if (!ss->dense) { return false; }
+
+	ss->dense_to_sparse_map = realloc(ss->dense_to_sparse_map, ss->cap * sizeof(uint32_t));
+	if (!ss->dense_to_sparse_map) { EXIT(); }
+
+	ss->sparse = realloc(ss->sparse, ss->cap * sizeof(uint32_t));
+	if (!ss->sparse) { EXIT(); }
+
+	ss->sparse_free_stack = realloc(ss->sparse_free_stack, ss->cap * sizeof(uint32_t));
+	if (!ss->sparse_free_stack) { EXIT(); }
+	return true;
+}
+
+// this way i can free complex objects, but i cant free a ss inside a ss
+bool SS_free(SSInternal* ss, bool free_item(void *)) {
+	if (free_item) {
+		for (size_t i = 0; i < ss->len; i++) {
+			if (!free_item(ss->dense[i])) { return false; }
+		}
+	}
+	free(ss->dense);
+	free(ss->dense_to_sparse_map);
+	free(ss->sparse);
+	free(ss->sparse_free_stack);
+	free(ss);
+	return true;
+}
+
+bool SS_free_inner_SS(void *item) {
+    if (!item) return true;
+    SSInternal *inner = (SSInternal*)item;
+    return SS_free(inner, SS_free_inner_SS);
+}
+
+uint32_t _SS_push_back(SSInternal* ss, void* item) {
+	if (ss->len == ss->cap) {
+		if (!_SS_realloc(ss)) {
+			return UINT32_MAX;
+		}
+	}
+
+	// calculate indices for sparse and dense of new item
+	ss->dense[ss->len] = item;
+	uint32_t sparse_index = ss->len;
+	if (ss->free_stack_len > 0) {
+		sparse_index = ss->sparse_free_stack[--ss->free_stack_len];
+	}
+
+	// set sparse at sparse_index to dense_index
+	ss->sparse[sparse_index] = ss->len;
+	ss->dense_to_sparse_map[ss->len] = sparse_index;
+	ss->len++;
+
+	return sparse_index;
+}
+
+bool _SS_remove(SSInternal* ss, uint32_t sparse_index_item_to_remove) {
+	if (sparse_index_item_to_remove >= ss->len + ss->free_stack_len ||
+			ss->sparse[sparse_index_item_to_remove] == UINT32_MAX) {
+		return false;
+	}
+
+	uint32_t dense_index_item_to_remove =
+		ss->sparse[sparse_index_item_to_remove];
+	uint32_t dense_index_last = ss->len - 1;
+
+	// free?
+
+	// check if item is last in dense
+	if (dense_index_item_to_remove != dense_index_last) {
+		// replace dense_to_remove with last dense
+		ss->dense[dense_index_item_to_remove] = ss->dense[dense_index_last];
+
+		// update dense_to_sparse_map
+		ss->dense_to_sparse_map[dense_index_item_to_remove] =
+			ss->dense_to_sparse_map[dense_index_last];
+
+		// copy spars_index_item_to_remove into sparse of last item in dense
+		ss->sparse[ss->dense_to_sparse_map[dense_index_last]] = 
+			dense_index_item_to_remove;
+
+		// push the free sparse_index onto the stack
+		ss->sparse_free_stack[ss->free_stack_len++] =
+			sparse_index_item_to_remove;
+		// mark sparse as free
+		ss->sparse[sparse_index_item_to_remove] = UINT32_MAX;
+	}
+	ss->len--;
+	return true;
+}
+
+
+void* _SS_get(SSInternal* sset, uint32_t sparse_index) {
+	if (sparse_index >= sset->len + sset->free_stack_len) {
+		return NULL;
+	}
+	uint32_t dense_index = sset->sparse[sparse_index];
+
+	// check if item was freed
+	if (dense_index == UINT32_MAX) {
+		return NULL;
+	}
+	// else return pointer to item
+	return sset->dense[dense_index];
+}
+
+void* _SS_at(SSInternal* sset, uint32_t dense_position) {
+	if (dense_position >= sset->len) {
+		return NULL;
+	}
+	return sset->dense[dense_position];
+}
+
+// SS_get_id
+uint32_t _SS_get_sparse_index(SSInternal* sset, uint32_t dense_position) {
+	if (dense_position >= sset->len) {
+		return UINT32_MAX;
+	}
+	return sset->dense_to_sparse_map[dense_position];
 }

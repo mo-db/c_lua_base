@@ -1,21 +1,27 @@
 project(
   'lua_basics',
   'c', 
-  default_options : ['c_std=c23', 'buildtype=debug']
+  default_options : ['c_std=c23', 'buildtype=release']
 )
 
-add_project_arguments(
-  ['-Wall',
-  '-Wextra',
-  '-Wnull-dereference',
-  '-fsanitize=address,undefined'],
-  language: 'c'
-)
+cflags = ['-O3', '-march=native', '-flto']
+link_args = ['-flto']
 
-add_project_link_arguments(
-  ['-fsanitize=address,undefined'],
-  language: 'c'
-)
+add_project_arguments(cflags, language: 'c')
+add_project_link_arguments(link_args, language: 'c')
+
+# add_project_arguments(
+#   ['-Wall',
+#   '-Wextra',
+#   '-Wnull-dereference',
+#   '-fsanitize=address,undefined'],
+#   language: 'c'
+# )
+#
+# add_project_link_arguments(
+#   ['-fsanitize=address,undefined'],
+#   language: 'c'
+# )
 
 # dependency search order: pkgconf -> cmake -> wrap-subprojects
 luajit_dep = dependency('luajit')

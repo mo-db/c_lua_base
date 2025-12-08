@@ -2,18 +2,21 @@
 #include <core.h>
 
 // LS
+// - custom string buff type
+// - stable address, fixed size, also LSView!
 typedef struct {
 	char* data;
 	uint32_t len;
 	uint32_t cap;
 } LS;
 
+// does not own the memory, just a fiew like in C++
 typedef struct {
 	char* data;
 	uint32_t len;
 } LSView;
 
-uint32_t static inline strlen_save(char* str) {
+uint32_t static inline strlen_save(const char* str) {
 	uint32_t len = strnlen(str, UINT32_MAX);
 	if (len == 0 || len == UINT32_MAX) { EXIT(); }
 	return len;
@@ -29,13 +32,14 @@ bool static inline LSView_offset(LSView* view, uint32_t offset) {
 	return true;
 }
 
-LSView static inline get_view(char* str) {
-	return (LSView){(str), strlen_save(str)};
+LSView static inline get_view(const char* str) {
+	return (LSView){((char*)str), strlen_save(str)};
 }
 
 LS LS_new(uint32_t cap);
-LS LS_new_from_cstring(char* str);
+LS LS_new_from_cstring(const char* str);
 void LS_free(LS ls);
+void LS_clear(LS* ls);
 
 // returns amount of appended characters, or 0 on failure
 uint32_t LS_append(LS* str_dest, LSView str);
@@ -154,6 +158,13 @@ void* _ArrList_at(ArrListInternal* arr_list, int index, size_t item_size);
 
 
 // --- *** sparse set *** ---
+
+/*
+	- use for items that are continuous memory and dont need to be freed
+	- push back does a shallow copie and maps an item to an id
+	- items can be removed
+*/
+
 typedef struct {
 	// amount of active items in dense
 	uint32_t len;
@@ -217,6 +228,11 @@ static void name##_free(name* s) {                                           \
     free(s);                                                                 \
 }
 
+#define NEW_SSET(type) \
+	
+	
+
+
 // TODO: make item not a pointer
 uint32_t _SSet_push_back(SSetInternal* sset, void* item, size_t item_size); 
 #define SSet_push_back(sset, item) \
@@ -248,3 +264,71 @@ bool _SSet_remove(SSetInternal* sset, uint32_t sparse_index, size_t item_size);
 	(_SSet_remove(&(sset)->internal, \
 							id, \
 							sizeof(*(sset)->payload)))
+
+
+// --- sparse set new try ---
+
+/*
+	- this is like a pointer database, maps pointers to id's
+	- push back copies the pointer to an item
+	- a free_function must be provided for the item to remove and free all
+*/
+
+
+typedef struct {
+	// amount of active items in dense
+	uint32_t len;
+	// max items that dense can hold
+	uint32_t cap;
+	// unordered contigous data-block of item
+	void **dense;
+	// corresponding sparse_index for each item in dense
+	uint32_t *dense_to_sparse_map;
+	// maps uinque id(=sparse_index) to dense_position
+	// len of sparse: len + free_stack_len
+	uint32_t *sparse;
+	// sparse_indices of removed items
+	uint32_t *sparse_free_stack;
+	// amount of indices in sparse_free_stack
+	uint32_t free_stack_len;
+	uint32_t alloc_size;
+} SSInternal;
+
+#define REALLOC_BITS_TO_SKIP 6
+#define SS(type) \
+	union { \
+		SSInternal internal; \
+		type* payload; \
+	}
+
+#define SS_DEFINE(name, type)         \
+	typedef union name {                \
+		SSInternal internal;          \
+		type *payload;                  \
+	} name;
+
+uint32_t _SS_push_back(SSInternal* ss, void* item); 
+#define SS_push_back(ss, item) \
+	(_SS_push_back(&(ss)->internal, \
+									 (1 ? (item) : (ss)->payload)))
+
+bool _SS_remove(SSInternal* ss, uint32_t sparse_index);
+#define SS_remove(ss, id) \
+	(_SS_remove(&(ss)->internal, \
+							id))
+// return unstable pointer to item corresponding to unique id
+void* _SS_get(SSInternal* sset, uint32_t sparse_index);
+#define SS_get(sset, id) \
+	((typeof((sset)->payload))_SS_get(&(sset)->internal, \
+																				id))
+
+// return unstable pointer to item at dense_position
+void* _SS_at(SSInternal* sset, uint32_t dense_position);
+#define SS_at(sset, dense_position) \
+	((typeof((sset)->payload))_SS_at(&(sset)->internal, \
+																				dense_position))
+// return id of item at dense_position
+uint32_t _SS_get_sparse_index(SSInternal* sset, uint32_t dense_position);
+#define SS_id_at(sset, dense_position) \
+	(_SS_get_sparse_index(&(sset)->internal, \
+													(dense_position)))

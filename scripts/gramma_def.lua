@@ -1,5 +1,8 @@
 -- *** init function ***
 -- clear lmanager, then add
+generator0_id = 0
+builder0_id = 0
+builder1_id = 0
 function lmanager_init(lmanager)
   generator0_id = _add_generator(lmanager);
   builder0_id = _add_builder(lmanager)
@@ -14,17 +17,11 @@ end
 --]]
 
 builder_configs = {
-  builder0_id = {
-    foo = "hallo",
-    bar = "hallo",
-  },
-  builder1_id = {
-    foo = "hallo",
-    bar = "hallo",
-  },
   default = {
-    foo = "hallo",
-    bar = "hallo",
+    pos = {500, 500},
+    angle = 0.5,
+    segment_node_count = 2,
+    generator_id = generator0_id,
   },
 }
 
@@ -65,6 +62,11 @@ generator_configs = {
   },
 }
 generator_configs_len = 0
+for _ in pairs(generator_configs) do
+  generator_configs_len  = generator_configs_len + 1
+end
+
+productions_len = 0
 for _ in pairs(generator_configs) do
   generator_configs_len  = generator_configs_len + 1
 end

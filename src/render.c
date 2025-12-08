@@ -47,6 +47,12 @@ void color_pixels(PixelBuffer* pixel_buffer, IVec2* pixels, int count, uint32_t 
   }
 }
 
+void set_pixel(PixelBuffer* fb, int x, int y, uint32_t color) {
+	if (x >= 0 && y >= 0 && x < fb->width && y < fb->height) {
+		fb->pixels[x + y * fb->width] = color;
+	}
+}
+
 Vec2 world_to_screen(Viewport* viewport, const Vec2 point_world) {
 	Vec2 point_screen =
       mul_Vec2(sub_Vec2(point_world, viewport->xy_offset), viewport->scale);
@@ -93,6 +99,44 @@ void draw_rect(Renderer* r, Vec2 start, Vec2 end, uint32_t color) {
 		color_pixels(&r->pixelbuffer, pixels, pixel_count, color);
 	}
 }
+
+
+void draw_rect_test(Renderer* fb, Vec2 p0, Vec2 p1, uint32_t color) {
+	// IVec2 p0 = get_IVec2(world_to_screen(&r->viewport, start));
+	// IVec2 p1 = get_IVec2(world_to_screen(&r->viewport, end));
+
+	int width = fb->pixelbuffer.width;
+	int height = fb->pixelbuffer.height;
+	printf("width: %d, height: %d\n", width, height);
+
+	int x_min_raw = round(MIN(p0.x, p1.x));
+	int x_max_raw = round(MAX(p0.x, p1.x));
+	int y_min_raw = round(MIN(p0.y, p1.y));
+	int y_max_raw = round(MAX(p0.y, p1.y));
+
+	int x_min = MIN(MAX(x_min_raw, 0.0), width);
+	int x_max = MIN(MAX(x_max_raw, 0.0), width);
+	int y_min = MIN(MAX(y_min_raw, 0.0), height);
+	int y_max = MIN(MAX(y_max_raw, 0.0), height);
+
+	int dx = x_max - x_min;
+	int dy = y_max - y_min;
+
+	if (dx == 0 || dy == 0) {
+		return;
+	}
+
+	// Vec2 pixels[width];
+	// int pixel_count;
+	for (int i = y_min; i < y_max; i++) {
+		// pixel_count = 0;
+		for (int j = x_min; j < x_max; j++) {
+			// pixels[pixel_count++] = (Vec2){j, i};
+			set_pixel(&fb->pixelbuffer, j, i, color);
+		}
+	}
+}
+
 
 // floating point line algorithm
 void draw_lerp_line(Renderer *r, Vec2 p0, Vec2 p1, uint32_t color) {

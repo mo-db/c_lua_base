@@ -66,6 +66,7 @@ typedef struct App {
 	SDL_Renderer* renderer;
 	SDL_Texture* window_texture;
 	Renderer* my_renderer;
+	Renderer* render_buff;
 
 
 	int pixel_density;
