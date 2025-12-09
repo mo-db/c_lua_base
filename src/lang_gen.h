@@ -32,6 +32,7 @@ typedef struct {
 	LSView context;
 	LSView replacement;
 } Production;
+void production_free(Production* prod);
 
 SSET_DEFINE(SSet_double, double);
 SSET_DEFINE(SSet_production, Production);

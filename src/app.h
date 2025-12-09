@@ -86,7 +86,7 @@ void process_events(App* app);
 void query_input(State* state);
 
 // update the render viewport using input
-void update_viewport(State* state, Viewport* viewport);
+bool update_viewport(State* state, Viewport* viewport);
 
 // lua
 // void update_lua_State(State* state);

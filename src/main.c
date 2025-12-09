@@ -41,24 +41,26 @@ int main() {
 
 
 //	--- foo setup ---
-	Trigon trigons[N_TRIGONS];
-	for (int i = 0; i < N_TRIGONS; i++) {
-		float ran = SDL_randf();
-
-		trigons[i] = (Trigon){(Vec2){0, 0},
-			(Vec2){(double)app.width, (double)app.height * ran},
-			(Vec2){(double)app.width * ran, (double)app.height}};
-
-		for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
-			// trigons[i].v[j] = (Vec2){(-SDL_randf() + 0.5) * ran * i,
-			// 	(-SDL_randf() + 0.5) * ran * i};
-
-		}
-	}
+	// Trigon trigons[N_TRIGONS];
+	// for (int i = 0; i < N_TRIGONS; i++) {
+	// 	float ran = SDL_randf();
+	//
+	// 	trigons[i] = (Trigon){(Vec2){0, 0},
+	// 		(Vec2){(double)app.width, (double)app.height * ran},
+	// 		(Vec2){(double)app.width * ran, (double)app.height}};
+	//
+	// 	for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
+	// 		// trigons[i].v[j] = (Vec2){(-SDL_randf() + 0.5) * ran * i,
+	// 		// 	(-SDL_randf() + 0.5) * ran * i};
+	//
+	// 	}
+	// }
 	uint64_t now = SDL_GetPerformanceCounter();
 	uint64_t last = SDL_GetPerformanceCounter();
 	uint64_t count = 0;
 	double elapsed_time = 0;
+
+	double accum = 0;
 
 
 
@@ -70,36 +72,48 @@ int main() {
 
 		process_events(&app);
 		query_input(&app.state);
-		update_viewport(&app.state, &app.my_renderer->viewport);
+
 		// update_lua_State(&app.state);
 		SDL_SetRenderDrawColor(app.renderer, 0, 0, 0, 255);
 		SDL_RenderClear(app.renderer);
+		if (update_viewport(&app.state, &app.my_renderer->viewport)) {
+			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
+		}
 		// renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
 
 		// reconfigure system
-		if (became_true(app.state.input.shift)) {
+
+		accum += elapsed_time;
+		if (accum > 500.0) {
+			printf("---------------------HI\n");
+			accum = 0;
+			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
-			// copy all the config values into the generators and builders
-			SSet_at(&lmanager.generators, 0)->iterations++;
 			reconfigure_system(app.state.L, &lmanager);
 		}
 
-		// reinit system
+		if (became_true(app.state.input.shift)) {
+			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
+			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
+			reconfigure_system(app.state.L, &lmanager);
+		}
 
-		// if (became_true(app.state.input.ctrl)) {
-		// 	gen.iterations++;
-		// 	gen.done_generating = false;
-		// }
+		if (became_true(app.state.input.ctrl)) {
+			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
+			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
+			reconfigure_system(app.state.L, &lmanager);
+			SSet_at(&lmanager.generators, 0)->iterations++;
+		}
 
-		uint64_t now = SDL_GetPerformanceCounter();
+		
 
 		bool out_of_time = update_lsystem(app.my_renderer, &lmanager, elapsed_time, now);
 
 		// foo(&app, trigons);
-		double elapsed =
-			((double)(SDL_GetPerformanceCounter() - now) / SDL_GetPerformanceFrequency()) * 1000;
-		 printf("foo-time: %f\n", elapsed);
+		// double elapsed =
+		// 	((double)(SDL_GetPerformanceCounter() - now) / SDL_GetPerformanceFrequency()) * 1000;
+		//  printf("foo-time: %f\n", elapsed);
 
 
 

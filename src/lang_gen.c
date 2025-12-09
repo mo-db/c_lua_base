@@ -35,6 +35,10 @@ void configure_defaults(lua_State *L, Generator *generator) {
 	} else { EXIT(); }
 }
 
+void production_free(Production* prod) {
+	LS_free(prod->str);
+}
+
 static void update_global_value(Generator *generator, double value,
                          const char ch) {
   double *gen_value =
@@ -72,11 +76,37 @@ static void configure_globals(lua_State *L, Generator *generator) {
 }
 
 static void configure_productions(lua_State *L, Generator *generator) {
+
+	// TODO: put prod into SS, remove should call free_prod
+	// clear productions
+	for (int i = 0; i < SSET_LEN(generator->productions); i++) {
+		production_free(SSet_at(&generator->productions, i));
+	}
+	SSet_clear(&generator->productions);
+
 	for (int i = 1;; i++) {
 		lua_pushnumber(L, i);
 		lua_gettable(L, -2);
 		if (lua_isstring(L, -1)) {
 			Production prod = parse_production_str(generator, lua_tolstring(L, -1, NULL));
+
+			LSView blub = LS_get_view(prod.str);
+			printf("### PROD DEBUG ###: %d\n", i);
+			printf("###\n");
+			LSView_trim(&blub);
+			LS_print(blub);
+			LSView_trim(&prod.symbol);
+			LS_print(prod.symbol);
+			LSView_trim(&prod.condition);
+			LS_print(prod.condition);
+			LSView_trim(&prod.context);
+			LS_print(prod.context);
+			LSView_trim(&prod.replacement);
+			LS_print(prod.replacement);
+			printf("sset len: %d\n", SSET_LEN(generator->productions));
+			printf("###\n");
+
+
 			if (SSet_push_back(&generator->productions, &prod) == UINT32_MAX) { EXIT(); }
 		} else {
 			break;
@@ -876,7 +906,7 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 				double elapsed =
 					((double)(SDL_GetPerformanceCounter() - now) / SDL_GetPerformanceFrequency()) * 1000;
 				 printf("gen-time: %f\n", elapsed);
-				// LS_print(generator->expanded_string);
+				LS_print(generator->expanded_string);
 
 				// mark all registered interpreters for reset
 				for (size_t i = 0; i < SSET_LEN(manager->builders); i++) {

@@ -17,10 +17,16 @@ end
 --]]
 
 builder_configs = {
+  [0] = {
+    pos = {700, 2100},
+    angle = 3.14/2,
+    segment_node_count = 3,
+    generator_id = generator0_id,
+  },
   default = {
-    pos = {500, 500},
-    angle = 0.5,
-    segment_node_count = 2,
+    pos = {700, 2000},
+    angle = 3.14/2,
+    segment_node_count = 1,
     generator_id = generator0_id,
   },
 }
@@ -36,7 +42,7 @@ end
 --]]
 
 generator_configs = {
-  generator1_id = {
+  [5] = {
     defaults = {
     },
     globals = {
@@ -46,8 +52,8 @@ generator_configs = {
   },
   default = {
     defaults = {
-      move = 50,
-      rotate = 0.2,
+      move = 10.0,
+      rotate = 0.1,
     },
     globals = {
       h = 0,
@@ -55,9 +61,8 @@ generator_configs = {
     },
     productions = {
       'S ! A{}',
-      'A{x} : u < 5 : bAB ! A[-{}A][+A]',
-      'A{x,y,z} : u < 5 : bAB ! A[-{}A][+A]',
-      'A : u < 5 : bAB ! A[-{}A][+A]',
+      'A : u < 5 : bAB ! BA[a-A][a+A]',
+      'B : u < 5 : bAB ! A[a--A][a++A]',
     },
   },
 }
