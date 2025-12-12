@@ -1,65 +1,86 @@
 #include "hum_ds.h"
 
-// LS
-LS LS_new(uint32_t cap) {
-	LS ls = {};
-	ls.data = malloc(cap);
-	ls.len = 0;
-	ls.cap = cap;
-	if (!ls.data) { EXIT(); }
-	return ls;
+void Str_putc(Str *str, const char ch) {
+	if (str->len + 1 >= str->cap) {
+		if (str->cap == 0) { str->cap += 256; }
+		else { str->cap *= 2; }
+		str->data = realloc(str->data, str->cap);
+		if (!str->data) { EXIT(); }
+		str->data[str->cap - 1] = '\0';
+	}
+	str->data[str->len++] = ch;
 }
 
-LS LS_new_from_cstring(const char* str) {
-	uint32_t len = strlen_save(str);
-	LS ls = LS_new(len);
-	memcpy(ls.data, str, len);
-	ls.len = len;
-	return ls;
+void Str_put_cstr(Str *str, char *cstr) {
+	uint32_t cstr_len = strlen_save(cstr);
+	for (int i = 0; i < cstr_len; i++) {
+		Str_putc(str, cstr[i]);
+	}
 }
 
-void LS_free(LS ls) {
-	if (!ls.data) { EXIT(); }
-	free(ls.data);
+StrView Str_get_view(const Str *str) {
+	if (!str) { EXIT(); }
+	return (StrView){str, 0, str->len};
 }
 
-void LS_clear(LS* ls) {
-	ls->len = 0;
+void Str_clear(Str* str) { 
+	str->len = 0; 
 }
 
-void LS_print(LSView ls) {
-	if (!ls.data) return;
-	for (uint32_t i = 0; i < ls.len; i++) {
-		putc(ls.data[i], stdout);
+Str *Str_new() {
+	Str *str = malloc(sizeof(Str));
+	str->data = NULL;
+	str->len = 0;
+	str->cap = 0;
+	return str;
+}
+
+void Str_free(Str *str) {
+	if (!str) { EXIT(); }
+	if (str->data) { free(str->data); }
+	free(str);
+	str = NULL;
+}
+
+void Str_print(Str *str) {
+	if (!str->data) return;
+	for (uint32_t i = 0; i < str->len; i++) {
+		putc(str->data[i], stdout);
 	}
 	printf("\n");
 }
-uint32_t LS_append(LS* str_dest, LSView str) {
-	if (str_dest->len < str_dest->cap && 
-			str.len < str_dest->cap - str_dest->len) {
-		memcpy(str_dest->data + str_dest->len, str.data, str.len);
-		str_dest->len += str.len;
-		return str.len;
-	} else {
-		return 0;
+
+void StrView_print(StrView *view) {
+	if (!view->str) return;
+	for (uint32_t i = 0; i < view->len; i++) {
+		putc(view->str->data[i], stdout);
 	}
-}
-bool LS_append_char(LS* str_dest, char ch) {
-	if (str_dest->len < str_dest->cap) {
-		str_dest->data[str_dest->len] = ch;
-		str_dest->len++;
-		return true;
-	} else {
-		return false;
-	}
+	printf("\n");
 }
 
+bool StrView_offset(StrView* view, uint32_t offset) {
+	if (!view) { EXIT(); }
+	if (offset > view->len) { return false; }
+	view->offset += offset;
+	view->len -= offset;
+	return true;
+}
 
+void StrView_trim(StrView* view) {
+	if (view->len == 0) { return; }
+	while (view->len > 0 && view->str->data[view->len - 1] == ' ') {
+		view->len--;
+	}
+
+	size_t offset = 0;
+	while (offset < view->len && view->str->data[offset] == ' ') {
+		++offset;
+	}
+	StrView_offset(view, offset);
+}
 
 
 // sa
-
-
 uint32_t capacity_for_segment_count(int segment_count) {
     return ((1 << SMALL_SEGMENTS_TO_SKIP) << segment_count) 
         - (1 << SMALL_SEGMENTS_TO_SKIP);
@@ -405,4 +426,17 @@ uint32_t _SS_get_sparse_index(SSInternal* sset, uint32_t dense_position) {
 		return UINT32_MAX;
 	}
 	return sset->dense_to_sparse_map[dense_position];
+}
+
+// --- da
+
+
+void _DA2_append(DAInternal* da, void* item, size_t item_size) {
+	if (da->len >= da->cap) {
+		if (da->cap == 0) { da->cap = 256; }
+		else { da->cap *= 2; }
+		da->data = realloc(da->data, da->cap * item_size);
+	}
+	memcpy(da->data, item, item_size);
+	da->len++;
 }

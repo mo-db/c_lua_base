@@ -16,6 +16,38 @@ int main() {
 
 	if (!lua_check(L, luaL_dofile(L, "src/baz.lua"))) { EXIT(); }
 
+
+
+
+
+	// Str str1 = {};
+	Str *str2 = Str_new();
+
+	Str_put_cstr(str2, "Panther");
+	StrView view2 = Str_get_view(str2);
+	StrView_print(&view2);
+	for (int i = 0; i < 50; i++) {
+		Str_put_cstr(str2, "Panther");
+	}
+	printf("cap: %d, len: %d\n", str2->cap, str2->len);
+	StrView_print(&view2);
+	Str_print(str2);
+
+	// Str_put_cstr(&str1, "Backoven");
+	// Str_print(&str1);
+	// Str_putc(&str1, 'A');
+	// Str_print(&str1);
+	// printf("HUH: %s\n", str1.data);
+
+	Str_free(str2);
+	
+
+
+
+
+
+
+
 	lua_getglobal(L, "bobi");
 	if (lua_istable(L, -1)) {
 		// if (!lua_access_table(L, "k")) {

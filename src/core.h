@@ -24,6 +24,7 @@
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 
+
 // --- debug macros ---
 #define EXIT()\
 	do {\
@@ -40,6 +41,13 @@
 	} while (0)
 
 // --- inline functions, no loops or recursion, must be small ---
+static inline uint32_t strlen_save(const char* str) {
+	if (!str) { EXIT(); }
+	uint32_t len = strnlen(str, UINT32_MAX);
+	if (len == UINT32_MAX) { EXIT(); }
+	return len;
+}
+
 static inline bool core_epsilon_equal(double x, double y) {
 	return (x < y + EPSILON && x > y - EPSILON);
 }

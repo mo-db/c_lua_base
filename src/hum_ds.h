@@ -1,63 +1,68 @@
 #pragma once
 #include <core.h>
 
-// LS
+// Str
 // - custom string buff type
-// - stable address, fixed size, also LSView!
+// - stable address, fixed size, also StrView!
+
 typedef struct {
 	char* data;
 	uint32_t len;
 	uint32_t cap;
-} LS;
+} Str;
+
+typedef struct {
+	const Str *str;
+	uint32_t offset;
+	uint32_t len;
+} StrView;
+
+
+Str *Str_new();
+void Str_free(Str *str);
+void Str_clear(Str* str);
+
+void Str_putc(Str *str, const char ch);
+void Str_put_cstr(Str *str, char *cstr);
+
+StrView Str_get_view(const Str *str);
+void Str_print(Str *str);
+
+bool StrView_offset(StrView* view, uint32_t offset);
+void StrView_trim(StrView* view);
+void StrView_print(StrView *view);
+
+
+
 
 // does not own the memory, just a fiew like in C++
-typedef struct {
-	char* data;
-	uint32_t len;
-} LSView;
+// typedef struct {
+// 	char* data;
+// 	uint32_t len;
+// } StrView;
 
-uint32_t static inline strlen_save(const char* str) {
-	uint32_t len = strnlen(str, UINT32_MAX);
-	if (len == 0 || len == UINT32_MAX) { EXIT(); }
-	return len;
-}
-LSView static inline LS_get_view(LS ls) {
-	return (LSView){ls.data, ls.len};
-}
 
-bool static inline LSView_offset(LSView* view, uint32_t offset) {
-	if (offset == 0 || offset > view->len) { return false; }
-	view->data += offset;
-	view->len -= offset;
-	return true;
-}
 
-LSView static inline get_view(const char* str) {
-	return (LSView){((char*)str), strlen_save(str)};
-}
 
-LS LS_new(uint32_t cap);
-LS LS_new_from_cstring(const char* str);
-void LS_free(LS ls);
-void LS_clear(LS* ls);
+
+
+
+
+
+// StrView static inline Str_get_view_from_cstr(const char* str) {
+// 	if (!str) { EXIT(); }
+// 	return (StrView){((char*)str), strlen_save(str)};
+// }
+//
+// Str *Str_new(uint32_t cap);
+// Str *Str_new_from_cstr(const char* str);
+
 
 // returns amount of appended characters, or 0 on failure
-uint32_t LS_append(LS* str_dest, LSView str);
-bool LS_append_char(LS* str_dest, char ch);
-void LS_print(LSView ls);
+// uint32_t Str_append(Str* str_dest, StrView str);
+//
+// bool Str_append_char(Str* str_dest, char ch);
 
-static inline void LSView_trim(LSView* view) {
-	if (view->len == 0) { return; }
-	while (view->len > 0 && view->data[view->len - 1] == ' ') {
-		view->len--;
-	}
-
-	size_t offset = 0;
-	while (offset < view->len && view->data[offset] == ' ') {
-		++offset;
-	}
-	LSView_offset(view, offset);
-}
 
 
 // sa
@@ -332,3 +337,79 @@ uint32_t _SS_get_sparse_index(SSInternal* sset, uint32_t dense_position);
 #define SS_id_at(sset, dense_position) \
 	(_SS_get_sparse_index(&(sset)->internal, \
 													(dense_position)))
+
+
+// --- simple dynamic array ---
+
+
+
+
+
+
+// this is a blueprint
+typedef struct {
+	double bli;
+	int bla;
+} Nose;
+
+#define DA_DEFINE(name, type) \
+	typedef struct { \
+		type *items; \
+		uint32_t len; \
+		uint32_t cap; \
+	} name;
+
+#define DA_append(da, item) \
+	do { \
+		if (da.len >= da.cap) { \
+			if (da.cap == 0) { da.cap = 256; } \
+			else { da.cap *= 2; } \
+			da.items = realloc(da.items, da.cap * sizeof(*da.items)); \
+		} \
+		da.items[da.len++] = item; \
+	} while(0) 
+
+#define BA_DEFINE(name, type) \
+	typedef struct { \
+		type *items; \
+		uint32_t len; \
+		uint32_t cap; \
+	} name;
+
+void* _BA_new(uint32_t cap, size_t item_size);
+#define BA_new(cap, type) \
+	do { \
+		if (da.len >= da.cap) { \
+			if (da.cap == 0) { da.cap = 256; } \
+			else { da.cap *= 2; } \
+			da.items = realloc(da.items, da.cap * sizeof(*da.items)); \
+		} \
+		da.items[da.len++] = item; \
+	} while(0) 
+
+
+
+typedef struct {
+	void *data;
+	uint32_t len;
+	uint32_t cap;
+} DAInternal;
+
+#define DA2(type) \
+	union { \
+		DAInternal internal; \
+		type* payload; \
+	}
+
+#define DA2_DEFINE(name, type) \
+	typedef union { \
+		DAInternal internal; \
+		type* payload; \
+	} name;
+
+void _DA2_append(DAInternal* da, void* item, size_t item_size);
+#define DA2_append(da, item) \
+	(_DA2_append(&(da)->internal, \
+							 (1 ? (item) : (da)->payload), \
+							 sizeof(*(da)->payload)))
+

@@ -16,6 +16,10 @@
 // -> deswegen pumpinglemma 2 zur unterscheidung
 
 
+
+DA_DEFINE(MY_DA, Nose);
+// DA2_DEFINE(MY_DA2, Nose);
+
 int main() {
 	App app = {};
 	app_init(&app, W, H);

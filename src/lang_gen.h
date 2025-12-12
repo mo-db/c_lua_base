@@ -26,11 +26,11 @@ typedef struct {
 } Var;
 
 typedef struct {
-	LS str;
-	LSView symbol;
-	LSView condition;
-	LSView context;
-	LSView replacement;
+	Str *str;
+	StrView symbol;
+	StrView condition;
+	StrView context;
+	StrView replacement;
 } Production;
 void production_free(Production* prod);
 
@@ -43,10 +43,10 @@ typedef struct {
 	uint32_t char_id_map[256];
 	SSet_production productions;
 
-	LS replacement_buffer;
-	LS str0;
-	LS str1;
-	LSView expanded_string;
+	Str *replacement_buffer;
+	Str *str0;
+	Str *str1;
+	StrView expanded_string;
 
 	uint32_t current_index;
 
@@ -72,8 +72,8 @@ void reset_generator(Generator* gen);
 bool generate_timed(Generator* gen, double frame_time, uint64_t frame_start);
 
 
-bool get_block(LSView str, char delim, LSView* block);
-LS cut_args(const LSView view);
+bool get_block(StrView str, char delim, StrView* block);
+Str cut_args(const StrView view);
 
 // --- interpretation ---
 
@@ -99,7 +99,7 @@ typedef struct {
 	TimeState state;
 	TimeState draw_state;
 	uint32_t generator_id;
-	LSView view;
+	StrView view;
 	uint32_t current_index;
 
 	SSet_Vec2 nodes;
