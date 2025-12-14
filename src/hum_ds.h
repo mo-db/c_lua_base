@@ -1,6 +1,8 @@
 #pragma once
 #include <core.h>
 
+// TODO: check for NULL in all sset functions
+
 /* --- Dynamic String datatype --- */
 // lives on the heap
 typedef struct {
@@ -93,11 +95,79 @@ void *_SSet2_get(SSet2Internal* sset, uint32_t id, size_t item_size);
 	((typeof((sset)->payload))_SSet2_get(((sset) ? &(sset)->internal : NULL), \
 								 (id), \
 								 sizeof(*(sset)->payload)))
+
 void *_SSet2_at(SSet2Internal* sset, uint32_t index, size_t item_size);
 #define SSet2_at(sset, id) \
 	((typeof((sset)->payload))_SSet2_at(((sset) ? &(sset)->internal : NULL), \
 								 (id), \
 								 sizeof(*(sset)->payload)))
+
+/* --- Sparse Set (no data) --- */
+// push back copies the memory of an item into this sset's data
+typedef struct {
+	void **data;
+	uint32_t *pos_to_id_map;
+	uint32_t *id_to_pos_map;
+	uint32_t *free_ids;
+	uint32_t cap;
+	uint32_t len;
+	uint32_t free_ids_count;
+} SS2Internal;
+
+#define SS2(type) \
+	union { \
+		SS2Internal internal; \
+		type* payload; \
+	}
+
+#define SS2_DEFINE(name, type) \
+	typedef union name { \
+		SS2Internal internal; \
+		type *payload; \
+	} name;
+
+static inline void *SS2_new() {
+	void *ss = calloc(1, sizeof(SS2Internal));
+	return ss;
+}
+#define SS2_free(sset) \
+	do { \
+		if ((sset) && *(sset)) { \
+			free((*(sset))->internal.data); \
+			free((*(sset))->internal.pos_to_id_map); \
+			free((*(sset))->internal.id_to_pos_map); \
+			free((*(sset))->internal.free_ids); \
+			free(*(sset)); \
+			*(sset) = NULL; \
+		} \
+	} while(0) 
+
+uint32_t _SS2_push_back(SS2Internal* sset, void* item); 
+#define SS2_push_back(sset, item) \
+	(_SS2_push_back(((sset) ? &(sset)->internal : NULL), \
+										(1 ? (item) : (sset)->payload)))
+
+bool _SS2_emplace_back(SS2Internal* sset, uint32_t id, void* item); 
+#define SS2_emplace_back(sset, id, item) \
+	(_SS2_emplace_back(((sset) ? &(sset)->internal : NULL), \
+										(id), \
+										(1 ? (item) : (sset)->payload)))
+
+bool _SS2_remove(SS2Internal* sset, uint32_t id_to_remove);
+#define SS2_remove(sset, id) \
+	(_SS2_remove(((sset) ? &(sset)->internal : NULL), \
+								 (id)))
+
+void *_SS2_get(SS2Internal* sset, uint32_t id);
+#define SS2_get(sset, id) \
+	((typeof((sset)->payload))_SS2_get(((sset) ? &(sset)->internal : NULL), \
+								 (id)))
+
+void *_SS2_at(SS2Internal* sset, uint32_t index);
+#define SS2_at(sset, id) \
+	((typeof((sset)->payload))_SS2_at(((sset) ? &(sset)->internal : NULL), \
+								 (id)))
+
 
 
 

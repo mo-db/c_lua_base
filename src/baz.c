@@ -15,7 +15,77 @@ SSET2_DEFINE(SSetVec2, Vec2);
 SSET2_DEFINE(SSetInt, int);
 SSET2_DEFINE(SSetDub, double);
 
+
+static void test_sparse_sets(void) {
+    puts("=== sparse set test ===");
+
+    /* ---------- SSet2 (owned data) ---------- */
+    {
+        SSET2_DEFINE(SSetInt, int);
+        SSetInt *s = SSet2_new();
+
+        /* emplace with explicit ids */
+        if (!SSet2_emplace_back(s, 'a', ((int){ 10 }))) EXIT();
+        if (!SSet2_emplace_back(s, 'b', ((int){ 20 }))) EXIT();
+        if (!SSet2_emplace_back(s, 'c', ((int){ 30 }))) EXIT();
+
+        /* dense iteration */
+        for (uint32_t i = 0; i < s->internal.len; ++i) {
+            printf("SSet2 int[%u] = %d\n", i, *SSet2_at(s, i));
+        }
+
+        /* remove middle */
+        if (!SSet2_remove(s, 'b')) EXIT();
+        if (SSet2_get(s, 'b') != NULL) EXIT();
+
+        /* id reuse */
+        if (!SSet2_emplace_back(s, 'b', ((int){ 222 }))) EXIT();
+        if (*SSet2_get(s, 'b') != 222) EXIT();
+
+        /* push_back path */
+        uint32_t id = SSet2_push_back(s, ((int){ 999 }));
+        if (*SSet2_get(s, id) != 999) EXIT();
+
+        printf("SSet2 final len = %u\n", s->internal.len);
+
+        SSet2_free(&s);
+    }
+
+    /* ---------- SS2 (pointer-only) ---------- */
+    {
+        SS2_DEFINE(SS2Int, int);
+        SS2Int *s = SS2_new();
+
+        int a = 1, b = 2, c = 3, d = 4;
+
+        if (!SS2_emplace_back(s, 'x', &a)) EXIT();
+        if (!SS2_emplace_back(s, 'y', &b)) EXIT();
+        if (!SS2_emplace_back(s, 'z', &c)) EXIT();
+
+        for (uint32_t i = 0; i < s->internal.len; ++i) {
+            printf("SS2 ptr[%u] = %d\n", i, *(int *)SS2_at(s, i));
+        }
+
+        /* remove last */
+        if (!SS2_remove(s, 'z')) EXIT();
+        if (SS2_get(s, 'z') != NULL) EXIT();
+
+        /* reuse id */
+        if (!SS2_emplace_back(s, 'z', &d)) EXIT();
+        if (*(int *)SS2_get(s, 'z') != 4) EXIT();
+
+        printf("SS2 final len = %u\n", s->internal.len);
+
+        SS2_free(&s);
+    }
+
+    puts("=== sparse set test OK ===");
+}
+
 int main() {
+	test_sparse_sets();
+	return 0;
+
 	lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
 
