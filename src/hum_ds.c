@@ -88,7 +88,7 @@ void StrView_trim(StrView* view) {
 
 
 /* --- Sparse Set (of data) --- */
-bool _SSet2_realloc(SSet2Internal *sset, size_t item_size) {
+bool _SSet_realloc(SSetInternal *sset, size_t item_size) {
 	bool first_alloc = false;
   if (sset->cap == 0) {
     sset->cap = 256;
@@ -127,10 +127,10 @@ bool _SSet2_realloc(SSet2Internal *sset, size_t item_size) {
   return true;
 }
 
-uint32_t _SSet2_push_back(SSet2Internal *sset, void *item, size_t item_size) {
+uint32_t _SSet_push_back(SSetInternal *sset, void *item, size_t item_size) {
 	if (!sset) { EXIT(); }
 	if (sset->len >= sset->cap) {
-		if (!_SSet2_realloc(sset, item_size)) { return UINT32_MAX; }
+		if (!_SSet_realloc(sset, item_size)) { return UINT32_MAX; }
 	}
 
 	// calculate indices for sparse and dense of new item
@@ -149,10 +149,10 @@ uint32_t _SSet2_push_back(SSet2Internal *sset, void *item, size_t item_size) {
 	return id;
 }
 
-bool _SSet2_emplace_back(SSet2Internal *sset, uint32_t id, void *item, size_t item_size) {
+bool _SSet_emplace_back(SSetInternal *sset, uint32_t id, void *item, size_t item_size) {
 	if (!sset) { EXIT(); }
 	if (sset->len >= sset->cap) {
-		if (!_SSet2_realloc(sset, item_size)) { return false; }
+		if (!_SSet_realloc(sset, item_size)) { return false; }
 	}
 
 	if (id >= sset->cap) { return false; }
@@ -176,7 +176,7 @@ bool _SSet2_emplace_back(SSet2Internal *sset, uint32_t id, void *item, size_t it
 	return true;
 }
 
-bool _SSet2_remove(SSet2Internal* sset, uint32_t id_to_remove, size_t item_size) {
+bool _SSet_remove(SSetInternal* sset, uint32_t id_to_remove, size_t item_size) {
 	if (!sset) { EXIT(); }
 	if (id_to_remove >= sset->cap ||
 			sset->id_to_pos_map[id_to_remove] == UINT32_MAX) {
@@ -211,7 +211,7 @@ bool _SSet2_remove(SSet2Internal* sset, uint32_t id_to_remove, size_t item_size)
 	return true;
 }
 
-void *_SSet2_get(SSet2Internal *sset, uint32_t id, size_t item_size) {
+void *_SSet_get(SSetInternal *sset, uint32_t id, size_t item_size) {
 	if (!sset) { EXIT(); }
 	if (id >= sset->cap || sset->id_to_pos_map[id] == UINT32_MAX) {
 		return NULL;
@@ -226,7 +226,7 @@ void *_SSet2_get(SSet2Internal *sset, uint32_t id, size_t item_size) {
 	return sset->data + pos * item_size;
 }
 
-void *_SSet2_at(SSet2Internal *sset, uint32_t pos, size_t item_size) {
+void *_SSet_at(SSetInternal *sset, uint32_t pos, size_t item_size) {
 	if (!sset) { EXIT(); }
 	if (pos >= sset->len) {
 		return NULL;
@@ -236,7 +236,7 @@ void *_SSet2_at(SSet2Internal *sset, uint32_t pos, size_t item_size) {
 
 
 /* --- Sparse Set (no managed data) --- */
-bool _SS2_realloc(SS2Internal *sset) {
+bool _SPSet_realloc(SPSetInternal *sset) {
 	bool first_alloc = false;
   if (sset->cap == 0) {
     sset->cap = 256;
@@ -275,10 +275,10 @@ bool _SS2_realloc(SS2Internal *sset) {
   return true;
 }
 
-uint32_t _SS2_push_back(SS2Internal *sset, void *item) {
+uint32_t _SPSet_push_back(SPSetInternal *sset, void *item) {
 	if (!sset) { EXIT(); }
 	if (sset->len >= sset->cap) {
-		if (!_SS2_realloc(sset)) { return UINT32_MAX; }
+		if (!_SPSet_realloc(sset)) { return UINT32_MAX; }
 	}
 
 	// calculate indices for sparse and dense of new item
@@ -296,10 +296,10 @@ uint32_t _SS2_push_back(SS2Internal *sset, void *item) {
 	return id;
 }
 
-bool _SS2_emplace_back(SS2Internal *sset, uint32_t id, void *item) {
+bool _SPSet_emplace_back(SPSetInternal *sset, uint32_t id, void *item) {
 	if (!sset) { EXIT(); }
 	if (sset->len >= sset->cap) {
-		if (!_SS2_realloc(sset)) { return false; }
+		if (!_SPSet_realloc(sset)) { return false; }
 	}
 
 	if (id >= sset->cap) { return false; }
@@ -322,7 +322,7 @@ bool _SS2_emplace_back(SS2Internal *sset, uint32_t id, void *item) {
 	return true;
 }
 
-bool _SS2_remove(SS2Internal* sset, uint32_t id_to_remove) {
+bool _SPSet_remove(SPSetInternal* sset, uint32_t id_to_remove) {
 	if (!sset) { EXIT(); }
 	if (id_to_remove >= sset->cap ||
 			sset->id_to_pos_map[id_to_remove] == UINT32_MAX) {
@@ -353,7 +353,7 @@ bool _SS2_remove(SS2Internal* sset, uint32_t id_to_remove) {
 	return true;
 }
 
-void *_SS2_get(SS2Internal *sset, uint32_t id) {
+void *_SPSet_get(SPSetInternal *sset, uint32_t id) {
 	if (!sset) { EXIT(); }
 	if (id >= sset->cap || sset->id_to_pos_map[id] == UINT32_MAX) {
 		return NULL;
@@ -368,7 +368,7 @@ void *_SS2_get(SS2Internal *sset, uint32_t id) {
 	return sset->data[index];
 }
 
-void *_SS2_at(SS2Internal *sset, uint32_t index) {
+void *_SPSet_at(SPSetInternal *sset, uint32_t index) {
 	if (!sset) { EXIT(); }
 	if (index >= sset->len) {
 		return NULL;
@@ -376,8 +376,8 @@ void *_SS2_at(SS2Internal *sset, uint32_t index) {
 	return sset->data[index];
 }
 
-// --- DA2 ---
-bool _DA2_realloc(DA2Internal *da, size_t item_size) {
+// --- DynArr ---
+bool _DynArr_realloc(DynArrInternal *da, size_t item_size) {
   if (da->cap == 0) {
     da->cap = 256;
   } else {
@@ -393,16 +393,16 @@ bool _DA2_realloc(DA2Internal *da, size_t item_size) {
   return true;
 }
 
-uint32_t _DA2_push(DA2Internal *da, void *item, size_t item_size) {
+uint32_t _DynArr_push(DynArrInternal *da, void *item, size_t item_size) {
 	if (!da) { EXIT(); }
 	if (da->len >= da->cap) {
-		if (!_DA2_realloc(da, item_size)) { return UINT32_MAX; }
+		if (!_DynArr_realloc(da, item_size)) { return UINT32_MAX; }
 	}
 	memcpy(da->data + da->len++ * item_size, item, item_size);
 	return da->len - 1;
 }
 
-void *_DA2_at(DA2Internal *da, uint32_t index, size_t item_size) {
+void *_DynArr_at(DynArrInternal *da, uint32_t index, size_t item_size) {
 	if (!da) { EXIT(); }
 	if (index >= da->len) {
 		return NULL;

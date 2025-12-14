@@ -41,26 +41,26 @@ typedef struct {
 	uint32_t cap;
 	uint32_t len;
 	uint32_t free_ids_count;
-} SSet2Internal;
+} SSetInternal;
 
-#define SSet2(type) \
+#define SSet(type) \
 	union { \
-		SSet2Internal internal; \
+		SSetInternal internal; \
 		type* payload; \
 	}
 
 #define SSET2_DEFINE(name, type) \
 	typedef union name { \
-		SSet2Internal internal; \
+		SSetInternal internal; \
 		type *payload; \
 	} name;
 
-static inline void *SSet2_new() {
-	void *ss = calloc(1, sizeof(SSet2Internal));
+static inline void *SSet_new() {
+	void *ss = calloc(1, sizeof(SSetInternal));
 	return ss;
 }
-// bool SSet2_clear(SSet2Internal* sset);
-#define SSet2_free(sset) \
+// bool SSet_clear(SSetInternal* sset);
+#define SSet_free(sset) \
 	do { \
 		if ((sset) && *(sset)) { \
 			free((*(sset))->internal.data); \
@@ -72,35 +72,35 @@ static inline void *SSet2_new() {
 		} \
 	} while(0) 
 
-uint32_t _SSet2_push_back(SSet2Internal* sset, void* item, size_t item_size); 
-#define SSet2_push_back(sset, item) \
-	(_SSet2_push_back(((sset) ? &(sset)->internal : NULL), \
+uint32_t _SSet_push_back(SSetInternal* sset, void* item, size_t item_size); 
+#define SSet_push_back(sset, item) \
+	(_SSet_push_back(((sset) ? &(sset)->internal : NULL), \
 										(1 ? &(item) : (sset)->payload), \
 										sizeof(*(sset)->payload)))
 
-bool _SSet2_emplace_back(SSet2Internal* sset, uint32_t id, void* item, size_t item_size); 
-#define SSet2_emplace_back(sset, id, item) \
-	(_SSet2_emplace_back(((sset) ? &(sset)->internal : NULL), \
+bool _SSet_emplace_back(SSetInternal* sset, uint32_t id, void* item, size_t item_size); 
+#define SSet_emplace_back(sset, id, item) \
+	(_SSet_emplace_back(((sset) ? &(sset)->internal : NULL), \
 										(id), \
 										(1 ? &(item) : (sset)->payload), \
 										sizeof(*(sset)->payload)))
 
-bool _SSet2_remove(SSet2Internal* sset, uint32_t id_to_remove, size_t item_size);
-#define SSet2_remove(sset, id) \
-	(_SSet2_remove(((sset) ? &(sset)->internal : NULL), \
+bool _SSet_remove(SSetInternal* sset, uint32_t id_to_remove, size_t item_size);
+#define SSet_remove(sset, id) \
+	(_SSet_remove(((sset) ? &(sset)->internal : NULL), \
 								 (id), \
 								 sizeof(*(sset)->payload)))
 
-// bool SSet2_contains(SSet2Internal* sset, uint32_t id);
-void *_SSet2_get(SSet2Internal* sset, uint32_t id, size_t item_size);
-#define SSet2_get(sset, id) \
-	((typeof((sset)->payload))_SSet2_get(((sset) ? &(sset)->internal : NULL), \
+// bool SSet_contains(SSetInternal* sset, uint32_t id);
+void *_SSet_get(SSetInternal* sset, uint32_t id, size_t item_size);
+#define SSet_get(sset, id) \
+	((typeof((sset)->payload))_SSet_get(((sset) ? &(sset)->internal : NULL), \
 								 (id), \
 								 sizeof(*(sset)->payload)))
 
-void *_SSet2_at(SSet2Internal* sset, uint32_t index, size_t item_size);
-#define SSet2_at(sset, id) \
-	((typeof((sset)->payload))_SSet2_at(((sset) ? &(sset)->internal : NULL), \
+void *_SSet_at(SSetInternal* sset, uint32_t index, size_t item_size);
+#define SSet_at(sset, id) \
+	((typeof((sset)->payload))_SSet_at(((sset) ? &(sset)->internal : NULL), \
 								 (id), \
 								 sizeof(*(sset)->payload)))
 
@@ -116,26 +116,26 @@ typedef struct {
 	uint32_t cap;
 	uint32_t len;
 	uint32_t free_ids_count;
-} SS2Internal;
+} SPSetInternal;
 
-#define SS2(type) \
+#define SPSet(type) \
 	union { \
-		SS2Internal internal; \
+		SPSetInternal internal; \
 		type* payload; \
 	}
 
-#define SS2_DEFINE(name, type) \
+#define SPSet_DEFINE(name, type) \
 	typedef union name { \
-		SS2Internal internal; \
+		SPSetInternal internal; \
 		type *payload; \
 	} name;
 
-static inline void *SS2_new() {
-	void *ss = calloc(1, sizeof(SS2Internal));
+static inline void *SPSet_new() {
+	void *ss = calloc(1, sizeof(SPSetInternal));
 	return ss;
 }
-// bool SS2_clear(SS2Internal* sset);
-#define SS2_free(sset) \
+// bool SPSet_clear(SPSetInternal* sset);
+#define SPSet_free(sset) \
 	do { \
 		if ((sset) && *(sset)) { \
 			free((*(sset))->internal.data); \
@@ -147,30 +147,30 @@ static inline void *SS2_new() {
 		} \
 	} while(0) 
 
-uint32_t _SS2_push_back(SS2Internal* sset, void* item); 
-#define SS2_push_back(sset, item) \
-	(_SS2_push_back(((sset) ? &(sset)->internal : NULL), \
+uint32_t _SPSet_push_back(SPSetInternal* sset, void* item); 
+#define SPSet_push_back(sset, item) \
+	(_SPSet_push_back(((sset) ? &(sset)->internal : NULL), \
 										(1 ? (item) : (sset)->payload)))
 
-bool _SS2_emplace_back(SS2Internal* sset, uint32_t id, void* item); 
-#define SS2_emplace_back(sset, id, item) \
-	(_SS2_emplace_back(((sset) ? &(sset)->internal : NULL), \
+bool _SPSet_emplace_back(SPSetInternal* sset, uint32_t id, void* item); 
+#define SPSet_emplace_back(sset, id, item) \
+	(_SPSet_emplace_back(((sset) ? &(sset)->internal : NULL), \
 										(id), \
 										(1 ? (item) : (sset)->payload)))
 
-bool _SS2_remove(SS2Internal* sset, uint32_t id_to_remove);
-#define SS2_remove(sset, id) \
-	(_SS2_remove(((sset) ? &(sset)->internal : NULL), \
+bool _SPSet_remove(SPSetInternal* sset, uint32_t id_to_remove);
+#define SPSet_remove(sset, id) \
+	(_SPSet_remove(((sset) ? &(sset)->internal : NULL), \
 								 (id)))
-// bool SS2_contains(SS2Internal* sset, uint32_t id);
-void *_SS2_get(SS2Internal* sset, uint32_t id);
-#define SS2_get(sset, id) \
-	((typeof((sset)->payload))_SS2_get(((sset) ? &(sset)->internal : NULL), \
+// bool SPSet_contains(SPSetInternal* sset, uint32_t id);
+void *_SPSet_get(SPSetInternal* sset, uint32_t id);
+#define SPSet_get(sset, id) \
+	((typeof((sset)->payload))_SPSet_get(((sset) ? &(sset)->internal : NULL), \
 								 (id)))
 
-void *_SS2_at(SS2Internal* sset, uint32_t index);
-#define SS2_at(sset, id) \
-	((typeof((sset)->payload))_SS2_at(((sset) ? &(sset)->internal : NULL), \
+void *_SPSet_at(SPSetInternal* sset, uint32_t index);
+#define SPSet_at(sset, id) \
+	((typeof((sset)->payload))_SPSet_at(((sset) ? &(sset)->internal : NULL), \
 								 (id)))
 
 
@@ -181,25 +181,25 @@ typedef struct {
 	uint8_t *data;
 	uint32_t cap;
 	uint32_t len;
-} DA2Internal;
+} DynArrInternal;
 
-#define DA2(type) \
+#define DynArr(type) \
 	union { \
-		DA2Internal internal; \
+		DynArrInternal internal; \
 		type* payload; \
 	}
 
-#define DA2_DEFINE(name, type) \
+#define DynArr_DEFINE(name, type) \
 	typedef union name { \
-		DA2Internal internal; \
+		DynArrInternal internal; \
 		type *payload; \
 	} name;
 
-static inline void *DA2_new() {
-	void *da = calloc(1, sizeof(DA2Internal));
+static inline void *DynArr_new() {
+	void *da = calloc(1, sizeof(DynArrInternal));
 	return da;
 }
-#define DA2_free(da) \
+#define DynArr_free(da) \
 	do { \
 		if ((da) && *(da)) { \
 			free((*(da))->internal.data); \
@@ -208,14 +208,14 @@ static inline void *DA2_new() {
 		} \
 	} while(0) 
 
-uint32_t _DA2_push(DA2Internal* da, void* item, size_t item_size); 
-#define DA2_push(da, item) \
-	(_DA2_push(((da) ? &(da)->internal : NULL), \
+uint32_t _DynArr_push(DynArrInternal* da, void* item, size_t item_size); 
+#define DynArr_push(da, item) \
+	(_DynArr_push(((da) ? &(da)->internal : NULL), \
 										(1 ? &(item) : (da)->payload), \
 										sizeof(*(da)->payload)))
 
-void *_DA2_at(DA2Internal* da, uint32_t index, size_t item_size); 
-#define DA2_at(da, index) \
-	(_DA2_at(((da) ? &(da)->internal : NULL), \
+void *_DynArr_at(DynArrInternal* da, uint32_t index, size_t item_size); 
+#define DynArr_at(da, index) \
+	(_DynArr_at(((da) ? &(da)->internal : NULL), \
 					 index, \
 					 sizeof(*(da)->payload)))
