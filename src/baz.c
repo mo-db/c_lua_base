@@ -82,8 +82,46 @@ static void test_sparse_sets(void) {
     puts("=== sparse set test OK ===");
 }
 
+
+static void test_DA2(void) {
+    puts("=== DA2 test ===");
+
+    DA2_DEFINE(DA2Int, int);
+    DA2Int *da = DA2_new();
+
+    /* push a few elements */
+    for (int i = 0; i < 10; ++i) {
+        uint32_t idx = DA2_push(da, ((int){ i * 10 }));
+        if (idx != (uint32_t)i) EXIT();
+    }
+
+    /* check contents */
+    for (uint32_t i = 0; i < da->internal.len; ++i) {
+        int *v = DA2_at(da, i);
+        if (!v) EXIT();
+        if (*v != (int)(i * 10)) EXIT();
+        printf("DA2[%u] = %d\n", i, *v);
+    }
+
+    /* grow past initial capacity */
+    for (int i = 10; i < 300; ++i) {
+        DA2_push(da, ((int){ i }));
+    }
+
+    /* bounds check */
+    if (DA2_at(da, da->internal.len) != NULL) EXIT();
+
+    printf("DA2 final len = %u, cap = %u\n",
+           da->internal.len,
+           da->internal.cap);
+
+    DA2_free(&da);
+
+    puts("=== DA2 test OK ===");
+}
 int main() {
 	test_sparse_sets();
+	test_DA2();
 	return 0;
 
 	lua_State* L = luaL_newstate();
