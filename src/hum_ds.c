@@ -1,5 +1,6 @@
 #include "hum_ds.h"
 
+/* --- Dynamic String datatype --- */
 void Str_putc(Str *str, const char ch) {
 	if (str->len + 1 >= str->cap) {
 		if (str->cap == 0) { str->cap += 256; }
@@ -78,6 +79,156 @@ void StrView_trim(StrView* view) {
 	}
 	StrView_offset(view, offset);
 }
+
+
+/* --- Sparse Set (of data) --- */
+bool _SSet2_realloc(SSet2Internal *sset, size_t item_size) {
+	bool first_alloc = false;
+  if (sset->cap == 0) {
+    sset->cap = 256;
+		first_alloc = true;
+  } else {
+    if (sset->cap >= UINT32_MAX / (sizeof(void *) * 2)) {
+      return false;
+    }
+    sset->cap *= 2;
+  }
+  sset->data = realloc(sset->data, sset->cap * item_size);
+  if (!sset->data) {
+    EXIT();
+  }
+  sset->pos_to_id_map =
+      realloc(sset->pos_to_id_map, sset->cap * sizeof(uint32_t));
+  if (!sset->pos_to_id_map) {
+    EXIT();
+  }
+  sset->id_to_pos_map =
+      realloc(sset->id_to_pos_map, sset->cap * sizeof(uint32_t));
+	// set all new id fields to UINT32_MAX
+	if (first_alloc) {
+  	memset(sset->id_to_pos_map, 0xFF, sset->cap * sizeof(uint32_t));
+	} else {
+		memset(sset->id_to_pos_map + (sset->cap / 2),
+					 0xFF, (sset->cap / 2) * sizeof(uint32_t));
+	}
+  if (!sset->id_to_pos_map) {
+    EXIT();
+  }
+  sset->free_ids = realloc(sset->free_ids, sset->cap * sizeof(uint32_t));
+  if (!sset->free_ids) {
+    EXIT();
+  }
+  return true;
+}
+
+uint32_t _SSet2_push_back(SSet2Internal *sset, void *item, size_t item_size) {
+	if (sset->len >= sset->cap) {
+		if (!_SSet2_realloc(sset, item_size)) { return UINT32_MAX; }
+	}
+
+	// calculate indices for sparse and dense of new item
+	uint32_t data_index = sset->len * item_size;
+	memcpy(sset->data + data_index, item, item_size);
+	uint32_t id = sset->len;
+	if (sset->free_ids_count > 0) {
+		id = sset->free_ids[--sset->free_ids_count];
+	}
+
+	// set sparse at sparse_index to dense_index
+	sset->id_to_pos_map[id] = sset->len;
+	sset->pos_to_id_map[sset->len] = id;
+	sset->len++;
+
+	return id;
+}
+
+bool _SSet2_emplace_back(SSet2Internal *sset, uint32_t id, void *item, size_t item_size) {
+	if (sset->len >= sset->cap) {
+		if (!_SSet2_realloc(sset, item_size)) { return UINT32_MAX; }
+	}
+
+	bool id_is_free = false;
+	if (sset->id_to_pos_map[id] == UINT32_MAX) {
+		id_is_free = true;
+	} else {
+		for (int i = sset->free_ids_count; i >= 0; i--) {
+			if (id == sset->free_ids[i]) { id_is_free = true; }
+		}
+	}
+	if (!id_is_free) { return false; }
+
+	uint32_t data_index = sset->len * item_size;
+	memcpy(sset->data + data_index, item, item_size);
+
+	sset->id_to_pos_map[id] = sset->len;
+	sset->pos_to_id_map[sset->len] = id;
+	sset->len++;
+
+	return true;
+}
+
+bool _SSet2_remove(SSet2Internal* sset, uint32_t id_to_remove, size_t item_size) {
+	// check if id indexes a valid item
+	if (id_to_remove >= sset->cap ||
+			sset->id_to_pos_map[id_to_remove] == UINT32_MAX) {
+		return false;
+	}
+
+	uint32_t pos_to_remove = sset->id_to_pos_map[id_to_remove];
+	uint32_t index_to_remove = pos_to_remove  * item_size;
+
+	uint32_t pos_last = sset->len - 1;
+	uint32_t index_last= pos_last * item_size;
+
+	// check if item is last in dense
+	if (pos_to_remove != pos_last) {
+		memcpy(sset->data + index_to_remove,
+					 sset->data + index_last,
+					 item_size);
+
+		// copy the sparse index of dense
+		sset->pos_to_id_map[pos_to_remove] =
+			sset->pos_to_id_map[pos_last];
+
+		// copier den sparse vom to remove item in den sparse vom letzten item
+		sset->id_to_pos_map[sset->pos_to_id_map[pos_last]] = pos_to_remove;
+
+		// push the free sparse_index onto the stack
+		sset->free_ids[sset->free_ids_count++] = id_to_remove;
+	}
+	// mark id as free
+	sset->id_to_pos_map[id_to_remove] = UINT32_MAX;
+	sset->len--;
+	return true;
+}
+
+void *_SSet2_get(SSet2Internal *sset, uint32_t id, size_t item_size) {
+	if (!sset) { EXIT(); }
+	if (id >= sset->cap || sset->id_to_pos_map[id] == UINT32_MAX) {
+		return NULL;
+	}
+	uint32_t pos = sset->id_to_pos_map[id];
+
+	// check if item was freed
+	if (pos == UINT32_MAX) {
+		return NULL;
+	}
+	// else return pointer to item
+	return sset->data + pos * item_size;
+}
+
+void *_SSet2_at(SSet2Internal *sset, uint32_t pos, size_t item_size) {
+	if (pos >= sset->len) {
+		return NULL;
+	}
+	return sset->data + pos * item_size;
+}
+
+
+
+
+
+
 
 
 // sa
@@ -298,12 +449,19 @@ bool _SSet_remove(SSetInternal* sset, uint32_t sparse_index_remove_item, size_t 
 
 
 // --- *** sset that takes pointers to malloced objects ***
+//
+
+void *_SS_new() {
+	void *ss = calloc(1, sizeof(SSInternal));
+	return ss;
+}
+
 bool _SS_realloc(SSInternal* ss) {
 	if (ss->cap == 0) {
-		ss->cap = 1 << REALLOC_BITS_TO_SKIP;
+		ss->cap = 256;
 	} else {
 		if ( ss->cap >= UINT32_MAX / (sizeof(void *) * 2)) { return false; }
-		ss->cap <<= 1;
+		ss->cap *= 2;
 	}
 
 	ss->dense = realloc(ss->dense, ss->cap * sizeof(void *));
@@ -322,11 +480,11 @@ bool _SS_realloc(SSInternal* ss) {
 
 // this way i can free complex objects, but i cant free a ss inside a ss
 bool SS_free(SSInternal* ss, bool free_item(void *)) {
-	if (free_item) {
-		for (size_t i = 0; i < ss->len; i++) {
-			if (!free_item(ss->dense[i])) { return false; }
-		}
-	}
+	// if (free_item) {
+	// 	for (size_t i = 0; i < ss->len; i++) {
+	// 		if (!free_item(ss->dense[i])) { return false; }
+	// 	}
+	// }
 	free(ss->dense);
 	free(ss->dense_to_sparse_map);
 	free(ss->sparse);
@@ -391,9 +549,9 @@ bool _SS_remove(SSInternal* ss, uint32_t sparse_index_item_to_remove) {
 		// push the free sparse_index onto the stack
 		ss->sparse_free_stack[ss->free_stack_len++] =
 			sparse_index_item_to_remove;
-		// mark sparse as free
-		ss->sparse[sparse_index_item_to_remove] = UINT32_MAX;
 	}
+	// mark sparse as free
+	ss->sparse[sparse_index_item_to_remove] = UINT32_MAX;
 	ss->len--;
 	return true;
 }
@@ -440,3 +598,80 @@ void _DA2_append(DAInternal* da, void* item, size_t item_size) {
 	memcpy(da->data, item, item_size);
 	da->len++;
 }
+
+// --- SSDouble --
+
+
+
+// maybe add size and FIXED/DYNAMIC flag
+SSD *SSD_new() {
+	SSD *ssd = calloc(1, sizeof(SSD));
+	return ssd;
+}
+
+bool SSD_free(SSD* ssd) {
+	if (!ssd) { return false; }
+	if (ssd->data &&
+			ssd->index_to_id_map &&
+			ssd->id_to_index_map &&
+			ssd->free_ids) {
+		free(ssd->data);
+		free(ssd->index_to_id_map);
+		free(ssd->id_to_index_map);
+		free(ssd->free_ids);
+	}
+	free(ssd);
+	ssd = NULL;
+	return true;
+}
+
+bool _SSD_realloc(SSD *ssd) {
+  if (ssd->cap == 0) {
+    ssd->cap = 256;
+  } else {
+    if (ssd->cap >= UINT32_MAX / (sizeof(void *) * 2)) {
+      return false;
+    }
+    ssd->cap *= 2;
+    ssd->data = realloc(ssd->data, ssd->cap * sizeof(void *));
+    if (!ssd->data) {
+      EXIT();
+    }
+    ssd->index_to_id_map =
+        realloc(ssd->index_to_id_map, ssd->cap * sizeof(uint32_t));
+    if (!ssd->index_to_id_map) {
+      EXIT();
+    }
+    ssd->id_to_index_map =
+        realloc(ssd->id_to_index_map, ssd->cap * sizeof(uint32_t));
+    if (!ssd->id_to_index_map) {
+      EXIT();
+    }
+    ssd->free_ids = realloc(ssd->free_ids, ssd->cap * sizeof(uint32_t));
+    if (!ssd->free_ids) {
+      EXIT();
+    }
+  }
+  return true;
+}
+
+uint32_t SSD_push_back(SSD *ssd, double item) {
+	if (ssd->len >= ssd->cap) {
+		if (!_SSD_realloc(ssd)) { return false; }
+	}
+
+	// calculate indices for sparse and dense of new item
+	ssd->data[ssd->len] = item;
+	uint32_t id = ssd->len;
+	if (ssd->free_ids_count > 0) {
+		id = ssd->free_ids[--ssd->free_ids_count];
+	}
+
+	// set sparse at sparse_index to dense_index
+	ssd->id_to_index_map[id] = ssd->len;
+	ssd->index_to_id_map[ssd->len] = id;
+	ssd->len++;
+
+	return id;
+}
+

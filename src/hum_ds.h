@@ -1,10 +1,8 @@
 #pragma once
 #include <core.h>
 
-// Str
-// - custom string buff type
-// - stable address, fixed size, also StrView!
-
+/* --- Dynamic String datatype --- */
+// lives on the heap
 typedef struct {
 	char* data;
 	uint32_t len;
@@ -16,7 +14,6 @@ typedef struct {
 	uint32_t offset;
 	uint32_t len;
 } StrView;
-
 
 Str *Str_new();
 void Str_free(Str *str);
@@ -32,39 +29,79 @@ bool StrView_offset(StrView* view, uint32_t offset);
 void StrView_trim(StrView* view);
 void StrView_print(StrView *view);
 
+/* --- Sparse Set (of data) --- */
+// push back copies the memory of an item into this sset's data
+typedef struct {
+	uint8_t *data;
+	uint32_t *pos_to_id_map;
+	uint32_t *id_to_pos_map;
+	uint32_t *free_ids;
+	uint32_t cap;
+	uint32_t len;
+	uint32_t free_ids_count;
+} SSet2Internal;
+
+#define SSet2(type) \
+	union { \
+		SSet2Internal internal; \
+		type* payload; \
+	}
+
+#define SSET2_DEFINE(name, type) \
+	typedef union name { \
+		SSet2Internal internal; \
+		type *payload; \
+	} name;
+
+static inline void *SSet2_new() {
+	void *ss = calloc(1, sizeof(SSet2Internal));
+	return ss;
+}
+#define SSet2_free(sset) \
+	do { \
+		if ((sset) && *(sset)) { \
+			free((*(sset))->internal.data); \
+			free((*(sset))->internal.pos_to_id_map); \
+			free((*(sset))->internal.id_to_pos_map); \
+			free((*(sset))->internal.free_ids); \
+			free(*(sset)); \
+			*(sset) = NULL; \
+		} \
+	} while(0) 
+
+uint32_t _SSet2_push_back(SSet2Internal* sset, void* item, size_t item_size); 
+#define SSet2_push_back(sset, item) \
+	(_SSet2_push_back(((sset) ? &(sset)->internal : NULL), \
+										(1 ? &(item) : (sset)->payload), \
+										sizeof(*(sset)->payload)))
+
+bool _SSet2_emplace_back(SSet2Internal* sset, uint32_t id, void* item, size_t item_size); 
+#define SSet2_emplace_back(sset, id, item) \
+	(_SSet2_emplace_back(((sset) ? &(sset)->internal : NULL), \
+										(id), \
+										(1 ? &(item) : (sset)->payload), \
+										sizeof(*(sset)->payload)))
+
+bool _SSet2_remove(SSet2Internal* sset, uint32_t id_to_remove, size_t item_size);
+#define SSet2_remove(sset, id) \
+	(_SSet2_remove(((sset) ? &(sset)->internal : NULL), \
+								 (id), \
+								 sizeof(*(sset)->payload)))
+
+void *_SSet2_get(SSet2Internal* sset, uint32_t id, size_t item_size);
+#define SSet2_get(sset, id) \
+	((typeof((sset)->payload))_SSet2_get(((sset) ? &(sset)->internal : NULL), \
+								 (id), \
+								 sizeof(*(sset)->payload)))
+void *_SSet2_at(SSet2Internal* sset, uint32_t index, size_t item_size);
+#define SSet2_at(sset, id) \
+	((typeof((sset)->payload))_SSet2_at(((sset) ? &(sset)->internal : NULL), \
+								 (id), \
+								 sizeof(*(sset)->payload)))
 
 
 
-// does not own the memory, just a fiew like in C++
-// typedef struct {
-// 	char* data;
-// 	uint32_t len;
-// } StrView;
-
-
-
-
-
-
-
-
-
-// StrView static inline Str_get_view_from_cstr(const char* str) {
-// 	if (!str) { EXIT(); }
-// 	return (StrView){((char*)str), strlen_save(str)};
-// }
-//
-// Str *Str_new(uint32_t cap);
-// Str *Str_new_from_cstr(const char* str);
-
-
-// returns amount of appended characters, or 0 on failure
-// uint32_t Str_append(Str* str_dest, StrView str);
-//
-// bool Str_append_char(Str* str_dest, char ch);
-
-
-
+// -------------------
 // sa
 #define SMALL_SEGMENTS_TO_SKIP 6
 
@@ -299,7 +336,7 @@ typedef struct {
 	uint32_t alloc_size;
 } SSInternal;
 
-#define REALLOC_BITS_TO_SKIP 6
+// payload is not used at runtime, it's just for typechecking
 #define SS(type) \
 	union { \
 		SSInternal internal; \
@@ -311,6 +348,11 @@ typedef struct {
 		SSInternal internal;          \
 		type *payload;                  \
 	} name;
+
+
+void *_SS_new();
+#define SS_new(type) \
+	((type*)_SS_new())
 
 uint32_t _SS_push_back(SSInternal* ss, void* item); 
 #define SS_push_back(ss, item) \
@@ -412,4 +454,21 @@ void _DA2_append(DAInternal* da, void* item, size_t item_size);
 	(_DA2_append(&(da)->internal, \
 							 (1 ? (item) : (da)->payload), \
 							 sizeof(*(da)->payload)))
+
+// --- SSD ---
+
+typedef struct {
+	double *data;
+	uint32_t *index_to_id_map;
+	uint32_t *id_to_index_map;
+	uint32_t *free_ids;
+	uint32_t cap;
+	uint32_t len;
+	uint32_t free_ids_count;
+} SSD;
+
+SSD *SSD_new();
+bool SSD_free(SSD* ssd);
+uint32_t SSD_push_back(SSD *ssd, double item);
+
 

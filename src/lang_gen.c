@@ -36,7 +36,7 @@ void configure_defaults(lua_State *L, Generator *generator) {
 }
 
 void production_free(Production* prod) {
-	LS_free(prod->str);
+	Str_free(prod->str);
 }
 
 static void update_global_value(Generator *generator, double value,
