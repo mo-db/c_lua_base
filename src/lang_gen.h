@@ -19,36 +19,34 @@ typedef enum {
 	IDLE,
 } TimeState;
 
-
 typedef struct {
 	char ch;
 	double value;
 } Var;
 
 typedef struct {
-	Str *str;
-	StrView symbol;
-	StrView condition;
-	StrView context;
-	StrView replacement;
+	Str *symbol;
+	Str *condition;
+	Str *context;
+	Str *replacement;
 } Production;
-void production_free(Production* prod);
+
 
 SSET_DEFINE(SSet_double, double);
-SSET_DEFINE(SSet_production, Production);
+SPSET_DEFINE(SPSet_production, Production);
 
 typedef struct {
-	TimeState state;
-	SSet_double vars;
-	uint32_t char_id_map[256];
-	SSet_production productions;
-
+	SSet_double *vars;
+	SPSet_production *productions;
 	Str *replacement_buffer;
 	Str *str0;
 	Str *str1;
-	StrView expanded_string;
 
+	// just a pointer not a string that has memory
+	Str *expanded_string;
 	uint32_t current_index;
+
+	TimeState state;
 
   bool reset_needed;
   bool done_generating;
@@ -61,13 +59,14 @@ typedef struct {
 
 } Generator;
 
-bool generator_add_var(SSet_double* sset, uint32_t* map, double value, char ch);
-double *generator_get_var_value(SSet_double* sset, uint32_t* map, char ch);
+Production *production_new();
+void production_free(Production *production);
+void format_production(Generator *generator, Production *production);
+Production *parse_production_str(char* production_str);
 
 
-Production parse_production_str(Generator* gen, const char* str_in);
-
-Generator new_generator();
+Generator *generator_new();
+void generator_free(Generator *gen);
 void reset_generator(Generator* gen);
 bool generate_timed(Generator* gen, double frame_time, uint64_t frame_start);
 
@@ -92,18 +91,18 @@ typedef struct {
 	uint32_t node_count;
 } Segment;
 
-SSET_DEFINE(SSet_Vec2, Vec2);
-SSET_DEFINE(SSet_Segment, Segment);
+DYNARR_DEFINE(DynArrVec2, Vec2);
+DYNARR_DEFINE(DynArrSegment, Segment);
 
 typedef struct {
 	TimeState state;
 	TimeState draw_state;
 	uint32_t generator_id;
-	StrView view;
+	Str *lstring_non_owning;
 	uint32_t current_index;
 
-	SSet_Vec2 nodes;
-	SSet_Segment construct;
+	DynArrVec2 *nodes;
+	DynArrSegment *construct;
 	uint32_t segment_node_count;
 
 	BuilderState build_state; // TODO, change fetch config lua
@@ -120,26 +119,26 @@ typedef struct {
 } Builder;
 
 
-void builder_add_node(Builder *builder , Vec2 *node);
+void builder_add_node(Builder *builder , Vec2 node);
 void reset_builder(Builder* builder);
 void reset_builder_draw(Builder *builder);
 
-Builder new_builder();
+Builder *builder_new();
+void builder_free(Builder *builder);
 
 bool build_timed(Builder* builder, double frame_time, uint64_t frame_start);
 bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_t frame_start);
 
-SSET_DEFINE(SSetGenerator, Generator);
-SSET_DEFINE(SSetBuilder, Builder);
+SPSET_DEFINE(SPSetGenerator, Generator);
+SPSET_DEFINE(SPSetBuilder, Builder);
 
-#define OBJ_MAX 1024
 typedef struct {
-	SSetGenerator generators;
-	SSetBuilder builders;
+	SPSetGenerator *generators;
+	SPSetBuilder *builders;
 } LManager;
 
-LManager LManager_new();
-void LManager_delete(LManager* manager);
+LManager *LManager_new();
+void LManager_free(LManager* manager);
 
 bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, uint64_t frame_start);
 void reconfigure_system(lua_State *L, LManager *manager);

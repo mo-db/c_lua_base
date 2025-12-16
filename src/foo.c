@@ -112,18 +112,9 @@ void configure_generator(App* app, Generator* gen, Interpreter* inter) {
 void co_init(App* app) {
 	CoState* co = &(app->state.co);
 	lua_State* L = app->state.L;
-	{
-		bool result = SSet_alloc(&co->manips, MAX_MANIPS);
-		if (!result) { EXIT(); }
-	}
-	{
-		bool result = SSet_alloc(&co->new_manips, MAX_MANIPS);
-		if (!result) { EXIT(); }
-	}
-	{
-		bool result = SSet_alloc(&co->dyn_objects, MAX_DYN_OBJECTS);
-		if (!result) { EXIT(); }
-	}
+	co->dyn_objects = SSet_new();
+	co->manips = SSet_new();
+	co->new_manips = SSet_new();
 	co->player_control_object = UINT32_MAX;
 
 	lua_getglobal(L, "load_level");
@@ -150,7 +141,7 @@ void co_update(App* app, double elapsed_time) {
 
 	// TODO: move somewhere --- player control for object ---
 	if (co->player_control_object != UINT32_MAX) {
-		DynObject* player_object = SSet_get(&co->dyn_objects, co->player_control_object);
+		DynObject* player_object = SSet_get(co->dyn_objects, co->player_control_object);
 		if (player_object == NULL) { EXIT(); }
 		Vec2 vel = {};
 
@@ -164,8 +155,8 @@ void co_update(App* app, double elapsed_time) {
 	}
 
 	// --- draw dynamic objects ---
-	for (uint32_t i = 0; i < SSET_LEN(co->dyn_objects); i++) {
-		DynObject* dyn_object = SSet_at(&co->dyn_objects, i);
+	for (uint32_t i = 0; i < SSet_len(co->dyn_objects); i++) {
+		DynObject* dyn_object = SSet_at(co->dyn_objects, i);
 		if (dyn_object == NULL) { EXIT(); }
 		Vec2 pos = dyn_object->position;
 		draw_rect(app->my_renderer, pos, add_Vec2(pos, (Vec2){50,50}), 0xFFFFFFFF);

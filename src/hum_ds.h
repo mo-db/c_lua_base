@@ -10,8 +10,7 @@ typedef struct {
 } Str;
 
 typedef struct {
-	const Str *str;
-	uint32_t offset;
+	char *data;
 	uint32_t len;
 } StrView;
 
@@ -19,10 +18,12 @@ Str *Str_new();
 void Str_free(Str *str);
 void Str_clear(Str* str);
 
-void Str_putc(Str *str, const char ch);
-void Str_put_cstr(Str *str, char *cstr);
+bool Str_putc(Str *str, char c);
+bool Str_put_cstr(Str *str, const char *cstr);
+bool Str_put_view(Str *str, StrView view);
 
 StrView Str_get_view(const Str *str);
+StrView Str_get_view_cstr(char *cstr);
 void Str_print(Str *str);
 
 bool StrView_offset(StrView* view, uint32_t offset);
@@ -49,17 +50,35 @@ typedef struct {
 		type* payload; \
 	}
 
-#define SSET2_DEFINE(name, type) \
+#define SSET_DEFINE(name, type) \
 	typedef union name { \
 		SSetInternal internal; \
 		type *payload; \
 	} name;
 
+static inline uint32_t SSet_len(void *sset) {
+	if (!sset) { EXIT(); }
+	return ((SSetInternal *)sset)->len;
+}
+static inline uint32_t SSet_cap(void *sset) {
+	if (!sset) { EXIT(); }
+	return ((SSetInternal *)sset)->cap;
+}
+
+static inline void _SSet_clear(SSetInternal *sset) {
+	if (!sset) { EXIT(); }
+	sset->len = 0;
+	sset->free_ids_count = 0;
+  memset(sset->id_to_pos_map, 0xFF, sset->cap * sizeof(uint32_t));
+}
+#define SSet_clear(sset) \
+	(_SSet_clear(((sset) ? &(sset)->internal : NULL)))
+
+
 static inline void *SSet_new() {
 	void *ss = calloc(1, sizeof(SSetInternal));
 	return ss;
 }
-// bool SSet_clear(SSetInternal* sset);
 #define SSet_free(sset) \
 	do { \
 		if ((sset) && *(sset)) { \
@@ -104,6 +123,11 @@ void *_SSet_at(SSetInternal* sset, uint32_t index, size_t item_size);
 								 (id), \
 								 sizeof(*(sset)->payload)))
 
+// TODO: needs type checking
+static inline uint32_t SSet_id_at(void *sset, uint32_t index) {
+	return ((SSetInternal *)sset)->pos_to_id_map[index];
+}
+
 /* --- Sparse Set (no data) --- */
 // only holds pointers to objects
 // does not manage their lifetime
@@ -124,17 +148,36 @@ typedef struct {
 		type* payload; \
 	}
 
-#define SPSet_DEFINE(name, type) \
+#define SPSET_DEFINE(name, type) \
 	typedef union name { \
 		SPSetInternal internal; \
 		type *payload; \
 	} name;
 
+static inline uint32_t SPSet_len(void *sset) {
+	if (!sset) { EXIT(); }
+	return ((SPSetInternal *)sset)->len;
+}
+static inline uint32_t SPSet_cap(void *sset) {
+	if (!sset) { EXIT(); }
+	return ((SPSetInternal *)sset)->cap;
+}
+
+static inline void _SPSet_clear(SPSetInternal *sset) {
+	if (!sset) { EXIT(); }
+	sset->len = 0;
+	sset->free_ids_count = 0;
+  memset(sset->id_to_pos_map, 0xFF, sset->cap * sizeof(uint32_t));
+}
+#define SPSet_clear(sset) \
+	(_SPSet_clear(((sset) ? &(sset)->internal : NULL)))
+
+
 static inline void *SPSet_new() {
 	void *ss = calloc(1, sizeof(SPSetInternal));
 	return ss;
 }
-// bool SPSet_clear(SPSetInternal* sset);
+
 #define SPSet_free(sset) \
 	do { \
 		if ((sset) && *(sset)) { \
@@ -172,7 +215,9 @@ void *_SPSet_at(SPSetInternal* sset, uint32_t index);
 #define SPSet_at(sset, id) \
 	((typeof((sset)->payload))_SPSet_at(((sset) ? &(sset)->internal : NULL), \
 								 (id)))
-
+static inline uint32_t SPSet_id_at(void *sset, uint32_t index) {
+	return ((SPSetInternal *)sset)->pos_to_id_map[index];
+}
 
 /* --- dynamic array --- */
 // simple dynammic array that can grow
@@ -189,16 +234,33 @@ typedef struct {
 		type* payload; \
 	}
 
-#define DynArr_DEFINE(name, type) \
+#define DYNARR_DEFINE(name, type) \
 	typedef union name { \
 		DynArrInternal internal; \
 		type *payload; \
 	} name;
 
+static inline uint32_t DynArr_len(void *da) {
+	if (!da) { EXIT(); }
+	return ((DynArrInternal *)da)->len;
+}
+static inline uint32_t DynArr_cap(void *da) {
+	if (!da) { EXIT(); }
+	return ((DynArrInternal *)da)->cap;
+}
+
 static inline void *DynArr_new() {
 	void *da = calloc(1, sizeof(DynArrInternal));
 	return da;
 }
+
+static inline void _DynArr_clear(DynArrInternal *da) {
+	if (!da) { EXIT(); }
+	da->len = 0;
+}
+#define DynArr_clear(da) \
+	(_DynArr_clear((da) ? &(da)->internal : NULL))
+
 #define DynArr_free(da) \
 	do { \
 		if ((da) && *(da)) { \

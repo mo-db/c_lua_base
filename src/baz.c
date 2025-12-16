@@ -11,117 +11,134 @@ int test_func(lua_State* L) {
 	return 1;
 }
 
-SSET2_DEFINE(SSetVec2, Vec2);
-SSET2_DEFINE(SSetInt, int);
-SSET2_DEFINE(SSetDub, double);
+SSET_DEFINE(SSetVec2, Vec2);
+SSET_DEFINE(SSetInt, int);
+SSET_DEFINE(SSetDub, double);
 
 
 static void test_sparse_sets(void) {
     puts("=== sparse set test ===");
 
-    /* ---------- SSet2 (owned data) ---------- */
+    /* ---------- SSet (owned data) ---------- */
     {
-        SSET2_DEFINE(SSetInt, int);
-        SSetInt *s = SSet2_new();
+        SSET_DEFINE(SSetInt, int);
+        SSetInt *s = SSet_new();
 
         /* emplace with explicit ids */
-        if (!SSet2_emplace_back(s, 'a', ((int){ 10 }))) EXIT();
-        if (!SSet2_emplace_back(s, 'b', ((int){ 20 }))) EXIT();
-        if (!SSet2_emplace_back(s, 'c', ((int){ 30 }))) EXIT();
+        if (!SSet_emplace_back(s, 'a', ((int){ 10 }))) EXIT();
+        if (!SSet_emplace_back(s, 'b', ((int){ 20 }))) EXIT();
+        if (!SSet_emplace_back(s, 'c', ((int){ 30 }))) EXIT();
 
         /* dense iteration */
         for (uint32_t i = 0; i < s->internal.len; ++i) {
-            printf("SSet2 int[%u] = %d\n", i, *SSet2_at(s, i));
+            printf("SSet int[%u] = %d\n", i, *SSet_at(s, i));
         }
 
         /* remove middle */
-        if (!SSet2_remove(s, 'b')) EXIT();
-        if (SSet2_get(s, 'b') != NULL) EXIT();
+        if (!SSet_remove(s, 'b')) EXIT();
+        if (SSet_get(s, 'b') != NULL) EXIT();
 
         /* id reuse */
-        if (!SSet2_emplace_back(s, 'b', ((int){ 222 }))) EXIT();
-        if (*SSet2_get(s, 'b') != 222) EXIT();
+        if (!SSet_emplace_back(s, 'b', ((int){ 222 }))) EXIT();
+        if (*SSet_get(s, 'b') != 222) EXIT();
 
         /* push_back path */
-        uint32_t id = SSet2_push_back(s, ((int){ 999 }));
-        if (*SSet2_get(s, id) != 999) EXIT();
+        uint32_t id = SSet_push_back(s, ((int){ 999 }));
+        if (*SSet_get(s, id) != 999) EXIT();
 
-        printf("SSet2 final len = %u\n", s->internal.len);
+        printf("SSet final len = %u\n", s->internal.len);
 
-        SSet2_free(&s);
+        SSet_free(&s);
     }
 
-    /* ---------- SS2 (pointer-only) ---------- */
+    /* ---------- SPSet (pointer-only) ---------- */
     {
-        SS2_DEFINE(SS2Int, int);
-        SS2Int *s = SS2_new();
+        SPSET_DEFINE(SPSetInt, int);
+        SPSetInt *s = SPSet_new();
 
         int a = 1, b = 2, c = 3, d = 4;
 
-        if (!SS2_emplace_back(s, 'x', &a)) EXIT();
-        if (!SS2_emplace_back(s, 'y', &b)) EXIT();
-        if (!SS2_emplace_back(s, 'z', &c)) EXIT();
+        if (!SPSet_emplace_back(s, 'x', &a)) EXIT();
+        if (!SPSet_emplace_back(s, 'y', &b)) EXIT();
+        if (!SPSet_emplace_back(s, 'z', &c)) EXIT();
 
         for (uint32_t i = 0; i < s->internal.len; ++i) {
-            printf("SS2 ptr[%u] = %d\n", i, *(int *)SS2_at(s, i));
+            printf("SPSet ptr[%u] = %d\n", i, *(int *)SPSet_at(s, i));
         }
 
         /* remove last */
-        if (!SS2_remove(s, 'z')) EXIT();
-        if (SS2_get(s, 'z') != NULL) EXIT();
+        if (!SPSet_remove(s, 'z')) EXIT();
+        if (SPSet_get(s, 'z') != NULL) EXIT();
 
         /* reuse id */
-        if (!SS2_emplace_back(s, 'z', &d)) EXIT();
-        if (*(int *)SS2_get(s, 'z') != 4) EXIT();
+        if (!SPSet_emplace_back(s, 'z', &d)) EXIT();
+        if (*(int *)SPSet_get(s, 'z') != 4) EXIT();
 
-        printf("SS2 final len = %u\n", s->internal.len);
+        printf("SPSet final len = %u\n", s->internal.len);
 
-        SS2_free(&s);
+        SPSet_free(&s);
     }
 
     puts("=== sparse set test OK ===");
 }
 
 
-static void test_DA2(void) {
-    puts("=== DA2 test ===");
+static void test_DynArr(void) {
+    puts("=== DynArr test ===");
 
-    DA2_DEFINE(DA2Int, int);
-    DA2Int *da = DA2_new();
+    DYNARR_DEFINE(DynArrInt, int);
+    DynArrInt *da = DynArr_new();
 
     /* push a few elements */
     for (int i = 0; i < 10; ++i) {
-        uint32_t idx = DA2_push(da, ((int){ i * 10 }));
+        uint32_t idx = DynArr_push(da, ((int){ i * 10 }));
         if (idx != (uint32_t)i) EXIT();
     }
 
     /* check contents */
     for (uint32_t i = 0; i < da->internal.len; ++i) {
-        int *v = DA2_at(da, i);
+        int *v = DynArr_at(da, i);
         if (!v) EXIT();
         if (*v != (int)(i * 10)) EXIT();
-        printf("DA2[%u] = %d\n", i, *v);
+        printf("DynArr[%u] = %d\n", i, *v);
     }
 
     /* grow past initial capacity */
     for (int i = 10; i < 300; ++i) {
-        DA2_push(da, ((int){ i }));
+        DynArr_push(da, ((int){ i }));
     }
 
     /* bounds check */
-    if (DA2_at(da, da->internal.len) != NULL) EXIT();
+    if (DynArr_at(da, da->internal.len) != NULL) EXIT();
 
-    printf("DA2 final len = %u, cap = %u\n",
+    printf("DynArr final len = %u, cap = %u\n",
            da->internal.len,
            da->internal.cap);
 
-    DA2_free(&da);
+    DynArr_free(&da);
 
-    puts("=== DA2 test OK ===");
+    puts("=== DynArr test OK ===");
 }
 int main() {
-	test_sparse_sets();
-	test_DA2();
+	// test_sparse_sets();
+	// test_DynArr();
+
+	Str *st = Str_new();
+	Str_put_cstr(st, "peter lustig!");
+	StrView view = Str_get_view(st);
+	LSView lsview = (LSView) {st->data, 11};
+
+	for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 300; i++) {
+			// Str_put_cstr(st, "hallo welt!");
+		}
+    puts("=== lsview ===");
+		LSView_print(&lsview);
+    puts("=== view ===");
+		StrView_print(&view);
+		
+	}
+	// Str_print(st);
 	return 0;
 
 	lua_State* L = luaL_newstate();
@@ -129,71 +146,40 @@ int main() {
 
 	if (!lua_check(L, luaL_dofile(L, "src/baz.lua"))) { EXIT(); }
 
-	// SSetVec2 *sset_vec2 = SSet2_new();
-	SSetInt *sset_int = SSet2_new();
-	SSetDub *sset_dub = SSet2_new();
+	// SSetVec2 *sset_vec2 = SSet_new();
+	SSetInt *sset_int = SSet_new();
+	SSetDub *sset_dub = SSet_new();
 
-	if (!SSet2_emplace_back(sset_dub, 'i', ((double){1.1}))) { EXIT(); }
-	if (!SSet2_emplace_back(sset_dub, 'j', ((double){22.22}))) { EXIT(); }
-
-	for (int i = 0; i < sset_dub->internal.len; i++) {
-		printf("dub: %f\n", *SSet2_at(sset_dub, i));
-	}
-
-	if (!SSet2_remove(sset_dub, 'j')) { EXIT(); }
-
-	if (!SSet2_emplace_back(sset_dub, 'k', ((double){1234.4321}))) { EXIT(); }
-	if (!SSet2_emplace_back(sset_dub, 'j', ((double){888.999}))) { EXIT(); }
+	if (!SSet_emplace_back(sset_dub, 'i', ((double){1.1}))) { EXIT(); }
+	if (!SSet_emplace_back(sset_dub, 'j', ((double){22.22}))) { EXIT(); }
 
 	for (int i = 0; i < sset_dub->internal.len; i++) {
-		printf("dub: %f\n", *SSet2_at(sset_dub, i));
+		printf("dub: %f\n", *SSet_at(sset_dub, i));
+	}
+
+	if (!SSet_remove(sset_dub, 'j')) { EXIT(); }
+
+	if (!SSet_emplace_back(sset_dub, 'k', ((double){1234.4321}))) { EXIT(); }
+	if (!SSet_emplace_back(sset_dub, 'j', ((double){888.999}))) { EXIT(); }
+
+	for (int i = 0; i < sset_dub->internal.len; i++) {
+		printf("dub: %f\n", *SSet_at(sset_dub, i));
 	}
 
 
-	// uint32_t id0 = SSet2_push_back(sset_vec2, ((Vec2){3.3, 4.4}));
-	// uint32_t id1 = SSet2_push_back(sset_vec2, ((Vec2){3, 4}));
-	bool did = SSet2_emplace_back(sset_int, 'k', ((int){88}));
-	uint32_t id3 = SSet2_push_back(sset_int, ((int){99}));
+	// uint32_t id0 = SSet_push_back(sset_vec2, ((Vec2){3.3, 4.4}));
+	// uint32_t id1 = SSet_push_back(sset_vec2, ((Vec2){3, 4}));
+	bool did = SSet_emplace_back(sset_int, 'k', ((int){88}));
+	uint32_t id3 = SSet_push_back(sset_int, ((int){99}));
 
 	if (did) {
-		printf("k id: %d\n", *SSet2_get(sset_int, 'k'));
+		printf("k id: %d\n", *SSet_get(sset_int, 'k'));
 	}
 
 	for (int i = 0; i < 300; i++) {
-		SSet2_push_back(sset_int, ((int){i*10000}));
+		SSet_push_back(sset_int, ((int){i*10000}));
 	}
 
-
-	Str *st = Str_new();
-
-	if (sset_int) {
-		printf("huh\n");
-	}
-
-	if (!SSet2_get(sset_int, 400)){
-		printf("didnt get\n");
-	} else {
-		printf("did get\n");
-	}
-
-	if (!SSet2_get(sset_int, 200)){
-		printf("didnt get\n");
-	} else {
-		printf("did get\n");
-	}
-
-
-	SSet2_remove(sset_int, id3);
-	if (SSet2_get(sset_int, id3)){
-		printf("id3: %d\n", *SSet2_get(sset_int, id3));
-	}
-	SSet2_free(&sset_int);
-
-	
-
-	// for (int i = 0; i < sset_int->internal.len; i++) {
-	// 	printf("int: %d\n", *SSet2_at(sset_int, i));
-	// }
 
 	return 0;
 

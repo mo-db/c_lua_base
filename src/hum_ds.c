@@ -1,29 +1,49 @@
 #include "hum_ds.h"
 
 /* --- Dynamic String datatype --- */
-void Str_putc(Str *str, const char ch) {
+bool Str_putc(Str *str, const char ch) {
 	if (!str) { EXIT(); }
 	if (str->len + 1 >= str->cap) {
 		if (str->cap == 0) { str->cap += 256; }
-		else { str->cap *= 2; }
+		else {
+			if (str->cap >= UINT32_MAX / 2) {
+				return false;
+			}
+			str->cap *= 2; 
+		}
 		str->data = realloc(str->data, str->cap);
 		if (!str->data) { EXIT(); }
 		str->data[str->cap - 1] = '\0';
 	}
 	str->data[str->len++] = ch;
+	return true;
 }
 
-void Str_put_cstr(Str *str, char *cstr) {
+bool Str_put_cstr(Str *str, const char *cstr) {
 	if (!str) { EXIT(); }
 	uint32_t cstr_len = strlen_save(cstr);
 	for (int i = 0; i < cstr_len; i++) {
-		Str_putc(str, cstr[i]);
+		if (!Str_putc(str, cstr[i])) { return false; }
 	}
+	return true;
+}
+
+bool Str_put_view(Str *str, StrView view) {
+	if (!str) { EXIT(); }
+	for (int i = 0; i < view.len; i++) {
+		if (!Str_putc(str, view.data[i])) { return false; }
+	}
+	return true;
 }
 
 StrView Str_get_view(const Str *str) {
 	if (!str) { EXIT(); }
-	return (StrView){str, 0, str->len};
+	return (StrView){str->data, str->len};
+}
+
+StrView Str_get_view_cstr(char *str) {
+	if (!str) { EXIT(); }
+	return (StrView){str, strlen_save(str)};
 }
 
 void Str_clear(Str* str) { 
@@ -43,7 +63,6 @@ void Str_free(Str *str) {
 	if (!str) { EXIT(); }
 	if (str->data) { free(str->data); }
 	free(str);
-	str = NULL;
 }
 
 void Str_print(Str *str) {
@@ -57,17 +76,16 @@ void Str_print(Str *str) {
 
 void StrView_print(StrView *view) {
 	if (!view) { EXIT(); }
-	if (!view->str) return;
+	if (!view->data) return;
 	for (uint32_t i = 0; i < view->len; i++) {
-		putc(view->str->data[i], stdout);
+		putc(view->data[i], stdout);
 	}
-	printf("\n");
 }
 
 bool StrView_offset(StrView* view, uint32_t offset) {
 	if (!view) { EXIT(); }
 	if (offset > view->len) { return false; }
-	view->offset += offset;
+	view->data += offset;
 	view->len -= offset;
 	return true;
 }
@@ -75,12 +93,12 @@ bool StrView_offset(StrView* view, uint32_t offset) {
 void StrView_trim(StrView* view) {
 	if (!view) { EXIT(); }
 	if (view->len == 0) { return; }
-	while (view->len > 0 && view->str->data[view->len - 1] == ' ') {
+	while (view->len > 0 && view->data[view->len - 1] == ' ') {
 		view->len--;
 	}
 
 	size_t offset = 0;
-	while (offset < view->len && view->str->data[offset] == ' ') {
+	while (offset < view->len && view->data[offset] == ' ') {
 		++offset;
 	}
 	StrView_offset(view, offset);
@@ -155,16 +173,16 @@ bool _SSet_emplace_back(SSetInternal *sset, uint32_t id, void *item, size_t item
 		if (!_SSet_realloc(sset, item_size)) { return false; }
 	}
 
+	// overwrite allways, can check with contains() if want
 	if (id >= sset->cap) { return false; }
-	bool id_is_free = false;
-	if (sset->id_to_pos_map[id] == UINT32_MAX) {
-		id_is_free = true;
-	} else {
-		for (int i = sset->free_ids_count - 1; i >= 0; i--) {
-			if (id == sset->free_ids[i]) { id_is_free = true; }
+	// if index in free stack, remove it
+	for (int i = sset->free_ids_count - 1; i >= 0; i--) {
+		if (id == sset->free_ids[i]) { 
+			memcpy(sset->free_ids + i,
+					sset->free_ids + i + 1,
+					sset->free_ids_count - (i + 1));
 		}
 	}
-	if (!id_is_free) { return false; }
 
 	uint32_t data_index = sset->len * item_size;
 	memcpy(sset->data + data_index, item, item_size);

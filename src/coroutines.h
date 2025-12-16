@@ -37,13 +37,11 @@ typedef struct {
 	int width, height;
 } Level;
 
-#define MAX_DYN_OBJECTS 1024
-#define MAX_MANIPS 1024
 typedef struct {
-	SSet(DynObject) dyn_objects;
+	SSet(DynObject) *dyn_objects;
 	uint32_t player_control_object;
-	SSet(Manip) manips;
-	SSet(Manip) new_manips;
+	SSet(Manip) *manips;
+	SSet(Manip) *new_manips;
 	Level level;
 } CoState;
 

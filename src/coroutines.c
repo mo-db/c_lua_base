@@ -22,7 +22,7 @@ int create_dynamic_object(CoState* co, Vec2 position) {
 	DynObject dyn = {};
 	dyn.position = position;
 	dyn.color = 0xFFFFFFFF;
-	uint32_t dyn_object_id = SSet_push_back(&co->dyn_objects, &dyn);
+	uint32_t dyn_object_id = SSet_push_back(co->dyn_objects, dyn);
 	if (dyn_object_id == UINT32_MAX) { EXIT(); }
 	return dyn_object_id;
 }
@@ -68,21 +68,21 @@ bool update_manip_move1(Manip* manip, DynObject* dyn_object, float frame_dt) {
 bool update_manips(CoState* co, lua_State* L, float elapsed_time) {
 
 	// --- add new manips to active manips
-	for (uint32_t i = 0; i < SSET_LEN(co->new_manips); i++) {
-		Manip* new_manip = SSet_at(&co->new_manips, i);
+	for (uint32_t i = 0; i < SSet_len(co->new_manips); i++) {
+		Manip* new_manip = SSet_at(co->new_manips, i);
 		if (!new_manip) { EXIT(); }
-		uint32_t manip_id = SSet_push_back(&co->manips, new_manip);
+		uint32_t manip_id = SSet_push_back(co->manips, *new_manip);
 		if (manip_id == UINT32_MAX) { EXIT(); }
 	}
-	SSet_clear(&co->new_manips);
+	SSet_clear(co->new_manips);
 
 	// --- run update functions of active manips ---
 	// this runs from backk to front to because manips can be removed
-	for (int64_t i = (int64_t)SSET_LEN(co->manips) - 1; i >= 0; i--) {
-		Manip* manip = SSet_at(&co->manips, i);
+	for (int64_t i = (int64_t)SSet_len(co->manips) - 1; i >= 0; i--) {
+		Manip* manip = SSet_at(co->manips, i);
 		if (!manip) { EXIT(); }
 
-		DynObject* dyn_object = SSet_get(&co->dyn_objects, manip->dyn_object_id);
+		DynObject* dyn_object = SSet_get(co->dyn_objects, manip->dyn_object_id);
 		if (!dyn_object) { EXIT(); }
 
 
@@ -100,7 +100,7 @@ bool update_manips(CoState* co, lua_State* L, float elapsed_time) {
 			}
 
 			// --- remove manip---
-			bool result = SSet_remove(&co->manips, SSet_id_at(&co->manips, i));
+			bool result = SSet_remove(co->manips, SSet_id_at(co->manips, i));
 			if (!result) { EXIT(); }
 		}
 	}
@@ -110,7 +110,7 @@ bool update_manips(CoState* co, lua_State* L, float elapsed_time) {
 // bad name, this actually does to many things, creates object
 void move_object(CoState* co, int dyn_object_id, Vec2 pos, float run_time) {
 	Manip new_manip = {};
-	DynObject* dyn_object = SSet_get(&co->dyn_objects, dyn_object_id);
+	DynObject* dyn_object = SSet_get(co->dyn_objects, dyn_object_id);
 	if (!dyn_object) { EXIT(); }
 	new_manip.dyn_object_id = dyn_object_id;
 	new_manip.start_pos = dyn_object->position;
@@ -118,7 +118,7 @@ void move_object(CoState* co, int dyn_object_id, Vec2 pos, float run_time) {
 	new_manip.run_time = run_time;
 	new_manip.manip_type = MOVE1;
 	new_manip.done = false;
-	uint32_t manip_id = SSet_push_back(&co->new_manips, &new_manip);
+	uint32_t manip_id = SSet_push_back(co->new_manips, new_manip);
 	if (manip_id == UINT32_MAX) { EXIT(); }
 }
 

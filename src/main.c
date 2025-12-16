@@ -17,15 +17,12 @@
 
 
 
-DA_DEFINE(MY_DA, Nose);
-// DA2_DEFINE(MY_DA2, Nose);
-
 int main() {
 	App app = {};
 	app_init(&app, W, H);
 	app.state.L = reload_lua();
 
-	LManager lmanager = LManager_new();
+	LManager *lmanager = LManager_new();
 
 	// reload lua lsystem config
 	lua_reload_file(app.state.L, "scripts/gramma_def.lua");
@@ -35,11 +32,11 @@ int main() {
 	lua_register_function(app.state.L, lremove_builder, "_remove_builder");
 
 	// calls the lua function
-	LManager_init_from_config(app.state.L, &lmanager);
+	LManager_init_from_config(app.state.L, lmanager);
 	printf("builders_len: %d, generators_len: %d\n", 
-			SSET_LEN(lmanager.builders), SSET_LEN(lmanager.generators));
+			SSet_len(lmanager->builders), SSet_len(lmanager->generators));
 
-	reconfigure_system(app.state.L, &lmanager);
+	reconfigure_system(app.state.L, lmanager);
 
 	// co_init(&app);
 
@@ -94,25 +91,25 @@ int main() {
 			accum = 0;
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
-			reconfigure_system(app.state.L, &lmanager);
+			reconfigure_system(app.state.L, lmanager);
 		}
 
 		if (became_true(app.state.input.shift)) {
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
-			reconfigure_system(app.state.L, &lmanager);
+			reconfigure_system(app.state.L, lmanager);
 		}
 
 		if (became_true(app.state.input.ctrl)) {
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
-			reconfigure_system(app.state.L, &lmanager);
-			SSet_at(&lmanager.generators, 0)->iterations++;
+			reconfigure_system(app.state.L, lmanager);
+			SPSet_at(lmanager->generators, 0)->iterations++;
 		}
 
 		
 
-		bool out_of_time = update_lsystem(app.my_renderer, &lmanager, elapsed_time, now);
+		bool out_of_time = update_lsystem(app.my_renderer, lmanager, elapsed_time, now);
 
 		// foo(&app, trigons);
 		// double elapsed =
