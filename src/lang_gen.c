@@ -401,6 +401,7 @@ void format_production(Generator *generator, Production *production) {
 
 	// fill in defaults
 	while (production_view.data < view_end) {
+		StrView_printn(&production_view);
 		char symbol = *production_view.data;
 
 		if (symbol == ' ') {
@@ -408,13 +409,16 @@ void format_production(Generator *generator, Production *production) {
 			continue;
 		}
 
+		// copy all symbols that cant have a {} block
 		if (symbol == '[' || symbol == ']') {
 			if (!Str_putc(replacement, symbol)) { EXIT(); }
 			if (!StrView_offset(&production_view, 1)) { EXIT(); }
 			continue;
 		}
 
+		// {} block must now follow the symbol
 		if (production_view.data + 1 < view_end) {
+			// symbol is not last
 			SymbolCategory symbol_category = get_symbol_category(symbol);
 			if (!Str_putc(replacement, symbol)) { EXIT(); }
 			if (!StrView_offset(&production_view, 1)) { EXIT(); }
@@ -441,6 +445,16 @@ void format_production(Generator *generator, Production *production) {
 				}
 				if (!StrView_offset(&production_view, block.len)) { EXIT(); }
 			}
+		} else {
+			// symbol is last
+			if (!Str_putc(replacement, symbol)) { EXIT(); }
+			if (!StrView_offset(&production_view, 1)) { EXIT(); }
+			SymbolCategory symbol_category = get_symbol_category(symbol);
+			double default_value = get_default(generator, symbol_category);
+			char new_arg_block[64];
+			new_arg_block[63] = '\0';
+			snprintf(new_arg_block, 64, "{%f}", default_value);
+			if (Str_put_view(replacement, Str_get_view_cstr(new_arg_block)) == 0) { EXIT(); }
 		}
 	}
 
@@ -775,11 +789,14 @@ void symbol_action(Builder* builder, char symbol, double value) {
 
 // symbols can be S{} or S depending on the type
 bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
+	// early return if lstring NULL
 	if (!builder->lstring_non_owning) { return true; }
 	StrView local_view = Str_get_view(builder->lstring_non_owning);
 	if (builder->current_index > 0) {
 		if (!StrView_offset(&local_view, builder->current_index)) { EXIT(); }
 	}
+
+	StrView_printn(&local_view);
 
 	char* view_end = local_view.data + local_view.len;
 
@@ -798,11 +815,6 @@ bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
 			if (!get_block(local_view, '{', &block)) { EXIT(); };
 			StrView value_view = {block.data + 1, block.len - 1};
 
-			// convert block to double
-			// char value_str[64];
-			// memcpy(value_str, block.data + 1, block.len - 1);
-			// value_str[63] = '\n';
-			// char* end;
 			double value = strtod(value_view.data, NULL);
 
 			symbol_action(builder, symbol, value);
@@ -813,6 +825,10 @@ bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
 				symbol_action(builder, symbol, 0);
 				if (!StrView_offset(&local_view, 1)) { EXIT(); }
 		} else {
+
+			puts("TEST");
+			printf("char: %c\n", *local_view.data);
+			StrView_printn(&local_view);
 			EXIT();
 		}
 	}
@@ -884,13 +900,11 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 					out_of_time = true;
 					break;
 				}
-				Str_print(generator->expanded_string);
+				//Str_print(generator->expanded_string);
 
 				// mark all registered interpreters for reset
 				for (size_t i = 0; i < DS_LEN(manager->builders); i++) {
 					Builder *builder = SPSet_at(manager->builders, i);
-					printf("builder->generator_id: %d\n", builder->generator_id);
-					printf("generator_id: %d\n", generator_id);
 					if (builder->generator_id == generator_id) {
 						builder->lstring_non_owning = generator->expanded_string;
 						builder->reset_needed = true;
@@ -904,7 +918,6 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 
 	for (size_t i = 0; i < DS_LEN(manager->builders); i++) {
 		Builder *builder = SPSet_at(manager->builders, i);
-		printf("builder nodes: %d\n", DS_LEN(builder->construct));
 
 		if (!out_of_time) {
 			switch(builder->state) {

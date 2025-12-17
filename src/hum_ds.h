@@ -41,6 +41,7 @@ void Str_printn(Str *str);
 bool StrView_offset(StrView* view, uint32_t offset);
 void StrView_trim(StrView* view);
 void StrView_print(StrView *view);
+void StrView_printn(StrView *view);
 
 /* --- Sparse Set (of data) --- */
 // holds shallow copies of objects

@@ -1,5 +1,10 @@
 -- *** init function ***
 -- clear lmanager, then add
+--[[
+  set autowriteall
+  au InsertLeavePre,TextChanged,TextChangedP * if &modifiable && !&readonly | silent! update | endif
+--]]
+
 
 -- persistent state survives dofile()
 
@@ -31,14 +36,14 @@ end
 -- default applies to all, use specific id to overwrite
 builder_configs = {
   [0] = {
-    pos = {400, 400},
+    pos = {500, 700},
     segment_node_count = 3,
     generator_id = state.generator1_id,
   },
   default = {
-    pos = {800, 800},
+    pos = {900, 800},
     angle = 3.14/4,
-    segment_node_count = 3,
+    segment_node_count = 1,
     generator_id = state.generator0_id,
   },
 }
@@ -52,8 +57,8 @@ builder_configs = {
 generator_configs = {
   [1] = {
     defaults = {
-      move = 20.0,
-      rotate = 0.5,
+      move = 10.0,
+      rotate = 0.1,
     },
     globals = {
     },
@@ -62,17 +67,18 @@ generator_configs = {
   },
   default = {
     defaults = {
-      move = 80.0,
-      rotate = 0.2,
+      move = 30.0,
+      rotate = 0.11,
     },
     globals = {
       h = 0,
       i = 0,
     },
     productions = {
-      'S ! A{}',
-      'A : u < 5 : bAB ! BA[a-A][a+A]',
-      'B : u < 5 : bAB ! A[a--A][a++A]',
+      'S ! B',
+      'A ! AA',
+      'B ! A[-B]+A[-B]+B',
+      -- 'C ! A[+C]-A[+C]',
     },
   },
 }
@@ -85,3 +91,5 @@ end
 function g(x)
 end
 
+-- l knowledge
+-- [...] center-focused shape

@@ -80,7 +80,6 @@ int main() {
 
 		accum += elapsed_time;
 		if (accum > 500.0) {
-			printf("---------------------HI\n");
 			accum = 0;
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
@@ -91,13 +90,17 @@ int main() {
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
 			reconfigure_system(app.state.L, lmanager);
+			for (int i = 0; i < DS_LEN(lmanager->generators); i++) {
+				if (SPSet_at(lmanager->generators, i)->iterations > 0) {
+					SPSet_at(lmanager->generators, i)->iterations--;
+				}
+			}
 		}
 
 		if (became_true(app.state.input.ctrl)) {
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
 			reconfigure_system(app.state.L, lmanager);
-			// SPSet_at(lmanager->generators, 0)->iterations++;
 			for (int i = 0; i < DS_LEN(lmanager->generators); i++) {
 				SPSet_at(lmanager->generators, i)->iterations++;
 			}
