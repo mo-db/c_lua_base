@@ -1,6 +1,16 @@
 #pragma once
 #include <core.h>
 
+#define DS_LEN(ds) (ds)->internal.len
+#define DS_CAP(ds) (ds)->internal.cap
+#define INITIAL_CAPACITY 256
+static inline bool increase_capacity(uint32_t* cap) {
+	if (*cap == UINT32_MAX) { return false; }
+	if (*cap == 0) { *cap += INITIAL_CAPACITY ;}
+	else { *cap *= 2; }
+	return true;
+}
+
 /* --- Dynamic String datatype --- */
 // lives on the heap
 typedef struct {
@@ -15,7 +25,7 @@ typedef struct {
 } StrView;
 
 Str *Str_new();
-void Str_free(Str *str);
+bool Str_free(Str **str);
 void Str_clear(Str* str);
 
 // -> false if len == UINT32_MAX
@@ -26,6 +36,7 @@ bool Str_put_view(Str *str, StrView view);
 StrView Str_get_view(const Str *str);
 StrView Str_get_view_cstr(char *cstr);
 void Str_print(Str *str);
+void Str_printn(Str *str);
 
 bool StrView_offset(StrView* view, uint32_t offset);
 void StrView_trim(StrView* view);
@@ -57,79 +68,50 @@ typedef struct {
 		type *payload; \
 	} name;
 
-static inline uint32_t SSet_len(void *sset) {
-	if (!sset) { EXIT(); }
-	return ((SSetInternal *)sset)->len;
-}
-static inline uint32_t SSet_cap(void *sset) {
-	if (!sset) { EXIT(); }
-	return ((SSetInternal *)sset)->cap;
-}
+void _SSet_clear(SSetInternal *sset);
+#define SSet_clear(sset) (_SSet_clear(&(sset)->internal))
 
-static inline void _SSet_clear(SSetInternal *sset) {
-	if (!sset) { EXIT(); }
-	sset->len = 0;
-	sset->free_ids_count = 0;
-  memset(sset->id_to_pos_map, 0xFF, sset->cap * sizeof(uint32_t));
-}
-#define SSet_clear(sset) \
-	(_SSet_clear(((sset) ? &(sset)->internal : NULL)))
+void *SSet_new();
 
-
-static inline void *SSet_new() {
-	void *ss = calloc(1, sizeof(SSetInternal));
-	return ss;
-}
-#define SSet_free(sset) \
-	do { \
-		if ((sset) && *(sset)) { \
-			free((*(sset))->internal.data); \
-			free((*(sset))->internal.pos_to_id_map); \
-			free((*(sset))->internal.id_to_pos_map); \
-			free((*(sset))->internal.free_ids); \
-			free(*(sset)); \
-			*(sset) = NULL; \
-		} \
-	} while(0) 
+bool _SSet_free(void **sset);
+#define SSet_free(sset) (_SSet_free((void **)sset))
 
 uint32_t _SSet_push_back(SSetInternal* sset, void* item, size_t item_size); 
 #define SSet_push_back(sset, item) \
-	(_SSet_push_back(((sset) ? &(sset)->internal : NULL), \
+	(_SSet_push_back(&(sset)->internal, \
 										(1 ? &(item) : (sset)->payload), \
 										sizeof(*(sset)->payload)))
 
-bool _SSet_emplace_back(SSetInternal* sset, uint32_t id, void* item, size_t item_size); 
-#define SSet_emplace_back(sset, id, item) \
-	(_SSet_emplace_back(((sset) ? &(sset)->internal : NULL), \
+bool _SSet_emplace_id(SSetInternal* sset, uint32_t id, void* item, size_t item_size); 
+#define SSet_emplace_id(sset, id, item) \
+	(_SSet_emplace_id(&(sset)->internal, \
 										(id), \
 										(1 ? &(item) : (sset)->payload), \
 										sizeof(*(sset)->payload)))
 
 bool _SSet_remove(SSetInternal* sset, uint32_t id_to_remove, size_t item_size);
 #define SSet_remove(sset, id) \
-	(_SSet_remove(((sset) ? &(sset)->internal : NULL), \
+	(_SSet_remove(&(sset)->internal, \
 								 (id), \
 								 sizeof(*(sset)->payload)))
 
 // bool SSet_contains(SSetInternal* sset, uint32_t id);
 void *_SSet_get(SSetInternal* sset, uint32_t id, size_t item_size);
 #define SSet_get(sset, id) \
-	((typeof((sset)->payload))_SSet_get(((sset) ? &(sset)->internal : NULL), \
+	((typeof((sset)->payload))_SSet_get(&(sset)->internal, \
 								 (id), \
 								 sizeof(*(sset)->payload)))
 
 void *_SSet_at(SSetInternal* sset, uint32_t index, size_t item_size);
 #define SSet_at(sset, id) \
-	((typeof((sset)->payload))_SSet_at(((sset) ? &(sset)->internal : NULL), \
+	((typeof((sset)->payload))_SSet_at(&(sset)->internal, \
 								 (id), \
 								 sizeof(*(sset)->payload)))
 
 static inline uint32_t _SSet_id_at(SSetInternal *sset, uint32_t index) {
 	return sset->pos_to_id_map[index];
 }
-#define SSet_id_at(sset, index) \
-	(_SSet_id_at(((sset) ? &(sset)->internal : NULL), \
-								 (index)))
+#define SSet_id_at(sset, index) (_SSet_id_at(&(sset)->internal, (index)))
 
 /* --- Sparse Set (no data) --- */
 // only holds pointers to objects
@@ -157,73 +139,46 @@ typedef struct {
 		type *payload; \
 	} name;
 
-static inline uint32_t SPSet_len(void *sset) {
-	if (!sset) { EXIT(); }
-	return ((SPSetInternal *)sset)->len;
-}
-static inline uint32_t SPSet_cap(void *sset) {
-	if (!sset) { EXIT(); }
-	return ((SPSetInternal *)sset)->cap;
-}
+void _SPSet_clear(SPSetInternal *sset);
+#define SPSet_clear(sset) (_SPSet_clear(&(sset)->internal))
 
-static inline void _SPSet_clear(SPSetInternal *sset) {
-	if (!sset) { EXIT(); }
-	sset->len = 0;
-	sset->free_ids_count = 0;
-  memset(sset->id_to_pos_map, 0xFF, sset->cap * sizeof(uint32_t));
-}
-#define SPSet_clear(sset) \
-	(_SPSet_clear(((sset) ? &(sset)->internal : NULL)))
+void *SPSet_new();
 
-
-static inline void *SPSet_new() {
-	void *ss = calloc(1, sizeof(SPSetInternal));
-	return ss;
-}
-
-#define SPSet_free(sset) \
-	do { \
-		if ((sset) && *(sset)) { \
-			free((*(sset))->internal.data); \
-			free((*(sset))->internal.pos_to_id_map); \
-			free((*(sset))->internal.id_to_pos_map); \
-			free((*(sset))->internal.free_ids); \
-			free(*(sset)); \
-			*(sset) = NULL; \
-		} \
-	} while(0) 
+bool _SPSet_free(void **sset);
+#define SPSet_free(sset) (_SPSet_free((void **)sset))
 
 uint32_t _SPSet_push_back(SPSetInternal* sset, void* item); 
 #define SPSet_push_back(sset, item) \
-	(_SPSet_push_back(((sset) ? &(sset)->internal : NULL), \
+	(_SPSet_push_back(&(sset)->internal, \
 										(1 ? (item) : (sset)->payload)))
 
-bool _SPSet_emplace_back(SPSetInternal* sset, uint32_t id, void* item); 
-#define SPSet_emplace_back(sset, id, item) \
-	(_SPSet_emplace_back(((sset) ? &(sset)->internal : NULL), \
+// TODO emplace_id()
+bool _SPSet_emplace_id(SPSetInternal* sset, uint32_t id, void* item); 
+#define SPSet_emplace_id(sset, id, item) \
+	(_SPSet_emplace_id(&(sset)->internal, \
 										(id), \
 										(1 ? (item) : (sset)->payload)))
 
 bool _SPSet_remove(SPSetInternal* sset, uint32_t id_to_remove);
 #define SPSet_remove(sset, id) \
-	(_SPSet_remove(((sset) ? &(sset)->internal : NULL), \
+	(_SPSet_remove(&(sset)->internal, \
 								 (id)))
 // bool SPSet_contains(SPSetInternal* sset, uint32_t id);
 void *_SPSet_get(SPSetInternal* sset, uint32_t id);
 #define SPSet_get(sset, id) \
-	((typeof((sset)->payload))_SPSet_get(((sset) ? &(sset)->internal : NULL), \
+	((typeof((sset)->payload))_SPSet_get(&(sset)->internal, \
 								 (id)))
 
 void *_SPSet_at(SPSetInternal* sset, uint32_t index);
 #define SPSet_at(sset, id) \
-	((typeof((sset)->payload))_SPSet_at(((sset) ? &(sset)->internal : NULL), \
+	((typeof((sset)->payload))_SPSet_at(&(sset)->internal, \
 								 (id)))
 
 static inline uint32_t _SPSet_id_at(SPSetInternal *sset, uint32_t index) {
 	return sset->pos_to_id_map[index];
 }
 #define SPSet_id_at(sset, index) \
-	(_SPSet_id_at(((sset) ? &(sset)->internal : NULL), \
+	(_SPSet_id_at(&(sset)->internal, \
 								 (index)))
 
 /* --- dynamic array --- */
@@ -247,44 +202,22 @@ typedef struct {
 		type *payload; \
 	} name;
 
-static inline uint32_t DynArr_len(void *da) {
-	if (!da) { EXIT(); }
-	return ((DynArrInternal *)da)->len;
-}
-static inline uint32_t DynArr_cap(void *da) {
-	if (!da) { EXIT(); }
-	return ((DynArrInternal *)da)->cap;
-}
+void *DynArr_new();
 
-static inline void *DynArr_new() {
-	void *da = calloc(1, sizeof(DynArrInternal));
-	return da;
-}
+static inline void _DynArr_clear(DynArrInternal *da) { da->len = 0; }
+#define DynArr_clear(da) (_DynArr_clear(&(da)->internal))
 
-static inline void _DynArr_clear(DynArrInternal *da) {
-	if (!da) { EXIT(); }
-	da->len = 0;
-}
-#define DynArr_clear(da) \
-	(_DynArr_clear((da) ? &(da)->internal : NULL))
+bool _DynArr_free(void **da);
+#define DynArr_free(da) (_DynArr_free((void **)da))
 
-#define DynArr_free(da) \
-	do { \
-		if ((da) && *(da)) { \
-			free((*(da))->internal.data); \
-			free(*(da)); \
-			*(da) = NULL; \
-		} \
-	} while(0) 
-
-uint32_t _DynArr_push(DynArrInternal* da, void* item, size_t item_size); 
-#define DynArr_push(da, item) \
-	(_DynArr_push(((da) ? &(da)->internal : NULL), \
+uint32_t _DynArr_push_back(DynArrInternal* da, void* item, size_t item_size); 
+#define DynArr_push_back(da, item) \
+	(_DynArr_push_back(&(da)->internal, \
 										(1 ? &(item) : (da)->payload), \
 										sizeof(*(da)->payload)))
 
 void *_DynArr_at(DynArrInternal* da, uint32_t index, size_t item_size); 
 #define DynArr_at(da, index) \
-	(_DynArr_at(((da) ? &(da)->internal : NULL), \
+	(_DynArr_at(&(da)->internal, \
 					 index, \
 					 sizeof(*(da)->payload)))

@@ -27,7 +27,7 @@ int main() {
 	// calls the lua function
 	LManager_init_from_config(app.state.L, lmanager);
 	printf("builders_len: %d, generators_len: %d\n", 
-			SSet_len(lmanager->builders), SSet_len(lmanager->generators));
+			DS_LEN(lmanager->builders), DS_LEN(lmanager->generators));
 
 	reconfigure_system(app.state.L, lmanager);
 
@@ -98,7 +98,7 @@ int main() {
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
 			reconfigure_system(app.state.L, lmanager);
 			// SPSet_at(lmanager->generators, 0)->iterations++;
-			for (int i = 0; i < SPSet_len(lmanager->generators); i++) {
+			for (int i = 0; i < DS_LEN(lmanager->generators); i++) {
 				SPSet_at(lmanager->generators, i)->iterations++;
 			}
 		}

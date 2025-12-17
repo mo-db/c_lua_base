@@ -9,10 +9,10 @@ LManager *LManager_new() {
 }
 void LManager_free(LManager* manager) {
 	if (!manager) { EXIT(); }
-	for (int i = 0; i < SPSet_len(manager->generators); i++) {
+	for (int i = 0; i < DS_LEN(manager->generators); i++) {
 		generator_free(SPSet_at(manager->generators, i));
 	}
-	for (int i = 0; i < SPSet_len(manager->builders); i++) {
+	for (int i = 0; i < DS_LEN(manager->builders); i++) {
 		builder_free(SPSet_at(manager->builders, i));
 	}
 	SPSet_free(&manager->generators);
@@ -45,22 +45,22 @@ void configure_defaults(lua_State *L, Generator *generator) {
 static void configure_globals(lua_State *L, Generator *generator) {
   double value = 0;
   if (lua_table_get_number(L, "h", &value)) {
-		SSet_emplace_back(generator->vars, 'h', value);
+		SSet_emplace_id(generator->vars, 'h', value);
 	}
   if (lua_table_get_number(L, "i", &value)) {
-		SSet_emplace_back(generator->vars, 'i', value);
+		SSet_emplace_id(generator->vars, 'i', value);
 	}
   if (lua_table_get_number(L, "j", &value)) {
-		SSet_emplace_back(generator->vars, 'j', value);
+		SSet_emplace_id(generator->vars, 'j', value);
 	}
   if (lua_table_get_number(L, "k", &value)) {
-		SSet_emplace_back(generator->vars, 'k', value);
+		SSet_emplace_id(generator->vars, 'k', value);
 	}
 }
 
 static void configure_productions(lua_State *L, Generator *generator) {
 	// free productions and clear the SPSet
-	for (int i = 0; i < SPSet_len(generator->productions); i++) {
+	for (int i = 0; i < DS_LEN(generator->productions); i++) {
 		production_free(SPSet_at(generator->productions, i));
 	}
 	SPSet_clear(generator->productions);
@@ -78,7 +78,7 @@ static void configure_productions(lua_State *L, Generator *generator) {
 		// Str_print(prod->replacement);
 		// printf("--- DEBUG PRINT END---\n");
 	}
-	Str_free(production_str);
+	Str_free(&production_str);
 }
 
 typedef enum {
@@ -164,7 +164,7 @@ void configure_builder(lua_State *L, Builder *builder) {
 void reconfigure_system(lua_State *L, LManager *manager) {
 	lua_getglobal(L, "generator_configs");
 	if (!lua_istable(L, -1)) { EXIT(); }
-	for (size_t i = 0; i < SPSet_len(manager->generators); i++) {
+	for (size_t i = 0; i < DS_LEN(manager->generators); i++) {
 		Generator *generator = SPSet_at(manager->generators, i);
 		uint32_t generator_id = SPSet_id_at(manager->generators, i);
 		generator->reset_needed = true;
@@ -185,16 +185,16 @@ void reconfigure_system(lua_State *L, LManager *manager) {
 	}
 
 	// format the prductions to include the defaults
-	for (size_t i = 0; i < SPSet_len(manager->generators); i++) {
+	for (size_t i = 0; i < DS_LEN(manager->generators); i++) {
 		Generator *generator = SPSet_at(manager->generators, i);
-		for (size_t i = 0; i < SPSet_len(generator->productions); i++) {
+		for (size_t i = 0; i < DS_LEN(generator->productions); i++) {
 			format_production(generator, SPSet_at(generator->productions, i));
 		}
 	}
 
 	lua_getglobal(L, "builder_configs");
 	if (!lua_istable(L, -1)) { EXIT(); }
-	for (size_t i = 0; i < SPSet_len(manager->builders); i++) {
+	for (size_t i = 0; i < DS_LEN(manager->builders); i++) {
 		Builder *builder = SPSet_at(manager->builders, i);
 		uint32_t builder_id = SPSet_id_at(manager->builders, i);
 		builder->reset_needed = true;
@@ -217,7 +217,7 @@ void reconfigure_system(lua_State *L, LManager *manager) {
 
 /* --- general lsystem stuff --- */
 void redraw_all(LManager *manager) {
-	for (size_t i = 0; i < SPSet_len(manager->builders); i++) {
+	for (size_t i = 0; i < DS_LEN(manager->builders); i++) {
 		Builder *builder = SPSet_at(manager->builders, i);
 		builder->redraw_needed = true;
 		builder->current_construct_index = 0;
@@ -307,13 +307,13 @@ Generator *generator_new() {
 void generator_free(Generator *gen) {
 	if (!gen) { EXIT(); }
 	SSet_free(&gen->vars);
-	for (int i = 0; i < SPSet_len(gen->productions); i++) {
+	for (int i = 0; i < DS_LEN(gen->productions); i++) {
 		production_free(SPSet_at(gen->productions, i));
 	}
 	SSet_free(&gen->productions);
-	Str_free(gen->replacement_buffer);
-	Str_free(gen->str0);
-	Str_free(gen->str1);
+	Str_free(&gen->replacement_buffer);
+	Str_free(&gen->str0);
+	Str_free(&gen->str1);
 	free(gen);
 }
 
@@ -354,10 +354,10 @@ Production *production_new() {
 
 void production_free(Production *production) {
 	if (!production) { EXIT(); }
-	Str_free(production->symbol);
-	Str_free(production->condition);
-	Str_free(production->context);
-	Str_free(production->replacement);
+	Str_free(&production->symbol);
+	Str_free(&production->condition);
+	Str_free(&production->context);
+	Str_free(&production->replacement);
 	free(production);
 }
 
@@ -440,7 +440,7 @@ void format_production(Generator *generator, Production *production) {
 		}
 	}
 
-	Str_free(tmp);
+	Str_free(&tmp);
 }
 
 // S{} : condition : context ! replacement
@@ -522,7 +522,7 @@ Str *maybe_replace(Generator* gen, char symbol, StrView block) {
 	if (block.len <= 2) {
 		// no args
 	}
-	for (uint32_t i = 0; i < SPSet_len(gen->productions); i++) {
+	for (uint32_t i = 0; i < DS_LEN(gen->productions); i++) {
 		Production* prod = SPSet_at(gen->productions, i);
 		if (*prod->symbol->data != symbol) { continue; }
 
@@ -657,7 +657,7 @@ void builder_free(Builder *builder) {
 }
 
 void builder_add_node(Builder *builder, Vec2 node) {
-	uint32_t node_id = DynArr_push(builder->nodes, node);
+	uint32_t node_id = DynArr_push_back(builder->nodes, node);
 	if (node_id == UINT32_MAX) { EXIT(); }
 	builder->build_state.node_ids_queue[builder->build_state.queue_head] = node_id;
 	builder->build_state.queue_head =
@@ -692,7 +692,7 @@ bool remove_builder(LManager* manager, uint32_t id) {
 }
 
 void clear_builders(LManager* manager) {
-	for (int i = 0; i < SPSet_len(manager->builders); i++) {
+	for (int i = 0; i < DS_LEN(manager->builders); i++) {
 		builder_free(SPSet_at(manager->builders, i));
 	}
 	SPSet_clear(manager->builders);
@@ -723,7 +723,7 @@ void symbol_action(Builder* builder, char symbol, double value) {
 			builder_add_node(builder, builder->build_state.pos);
 
 			// if there are enough nodes, push segment
-			if (DynArr_len(builder->nodes) >= builder->segment_node_count) {
+			if (DS_LEN(builder->nodes) >= builder->segment_node_count) {
 				Segment seg = {};
 				seg.node_count = builder->segment_node_count;
 				uint32_t queue_tail = builder->build_state.queue_head;
@@ -731,7 +731,7 @@ void symbol_action(Builder* builder, char symbol, double value) {
 					seg.node_ids[i] =
 						builder->build_state.node_ids_queue[(queue_tail + i) % builder->segment_node_count];
 				}
-				DynArr_push(builder->construct, seg);
+				DynArr_push_back(builder->construct, seg);
 			}
 		}
 	}
@@ -819,12 +819,12 @@ bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
 }
 
 bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_t frame_start) {
-	// for (uint32_t i = 0; i < DynArr_len(builder->nodes); i++) {
+	// for (uint32_t i = 0; i < DS_LEN(builder->nodes); i++) {
 	// 	Vec2* pos = DynArr_at(builder->nodes, i);
 	// 	draw_rect(renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFF00FFFF);
 	// }
 	
-	for (uint32_t i = builder->current_construct_index; i < DynArr_len(builder->construct); i++) {
+	for (uint32_t i = builder->current_construct_index; i < DS_LEN(builder->construct); i++) {
 #ifdef timed
 		if (time_limit_reached(frame_start, frame_time)) {
 			builder->current_construct_index = i;
@@ -860,7 +860,7 @@ bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_
 
 bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, uint64_t frame_start) {
 	bool out_of_time = false;
-	for (size_t i = 0; i < SPSet_len(manager->generators); i++) {
+	for (size_t i = 0; i < DS_LEN(manager->generators); i++) {
 		Generator* generator = SPSet_at(manager->generators, i);
 		uint32_t generator_id = SPSet_id_at(manager->generators, i);
 
@@ -883,7 +883,7 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 				Str_print(generator->expanded_string);
 
 				// mark all registered interpreters for reset
-				for (size_t i = 0; i < SPSet_len(manager->builders); i++) {
+				for (size_t i = 0; i < DS_LEN(manager->builders); i++) {
 					Builder *builder = SPSet_at(manager->builders, i);
 					printf("builder->generator_id: %d\n", builder->generator_id);
 					printf("generator_id: %d\n", generator_id);
@@ -898,9 +898,9 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 		}
 	}
 
-	for (size_t i = 0; i < SPSet_len(manager->builders); i++) {
+	for (size_t i = 0; i < DS_LEN(manager->builders); i++) {
 		Builder *builder = SPSet_at(manager->builders, i);
-		printf("builder nodes: %d\n", DynArr_len(builder->construct));
+		printf("builder nodes: %d\n", DS_LEN(builder->construct));
 
 		if (!out_of_time) {
 			switch(builder->state) {

@@ -155,7 +155,7 @@ void co_update(App* app, double elapsed_time) {
 	}
 
 	// --- draw dynamic objects ---
-	for (uint32_t i = 0; i < SSet_len(co->dyn_objects); i++) {
+	for (uint32_t i = 0; i < DS_LEN(co->dyn_objects); i++) {
 		DynObject* dyn_object = SSet_at(co->dyn_objects, i);
 		if (dyn_object == NULL) { EXIT(); }
 		Vec2 pos = dyn_object->position;

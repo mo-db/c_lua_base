@@ -68,7 +68,7 @@ bool update_manip_move1(Manip* manip, DynObject* dyn_object, float frame_dt) {
 bool update_manips(CoState* co, lua_State* L, float elapsed_time) {
 
 	// --- add new manips to active manips
-	for (uint32_t i = 0; i < SSet_len(co->new_manips); i++) {
+	for (uint32_t i = 0; i < DS_LEN(co->new_manips); i++) {
 		Manip* new_manip = SSet_at(co->new_manips, i);
 		if (!new_manip) { EXIT(); }
 		uint32_t manip_id = SSet_push_back(co->manips, *new_manip);
@@ -78,7 +78,7 @@ bool update_manips(CoState* co, lua_State* L, float elapsed_time) {
 
 	// --- run update functions of active manips ---
 	// this runs from backk to front to because manips can be removed
-	for (int64_t i = (int64_t)SSet_len(co->manips) - 1; i >= 0; i--) {
+	for (int64_t i = (int64_t)DS_LEN(co->manips) - 1; i >= 0; i--) {
 		Manip* manip = SSet_at(co->manips, i);
 		if (!manip) { EXIT(); }
 

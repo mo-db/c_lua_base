@@ -2,31 +2,17 @@
 
 /* --- Dynamic String datatype --- */
 bool Str_putc(Str *str, const char ch) {
-  if (!str) {
-    EXIT();
-  }
   if (str->len + 1 >= str->cap) {
-    if (str->cap == UINT32_MAX) {
-      return 0;
-    }
-    if (str->cap == 0) {
-      str->cap += 256;
-    } else {
-      str->cap *= 2;
-    }
+    if (!increase_capacity(&str->cap)) { return false; }
     str->data = realloc(str->data, str->cap);
-    if (!str->data) {
-      EXIT();
-    }
+    if (!str->data) { EXIT(); }
     str->data[str->cap - 1] = '\0';
   }
-
   str->data[str->len++] = ch;
   return true;
 }
 
 bool Str_put_cstr(Str *str, const char *cstr) {
-	if (!str) { EXIT(); }
 	uint32_t cstr_len = strlen_save(cstr);
 	for (int i = 0; i < cstr_len; i++) {
 		if (!Str_putc(str, cstr[i])) { return false; }
@@ -35,7 +21,6 @@ bool Str_put_cstr(Str *str, const char *cstr) {
 }
 
 bool Str_put_view(Str *str, StrView view) {
-	if (!str) { EXIT(); }
 	for (int i = 0; i < view.len; i++) {
 		if (!Str_putc(str, view.data[i])) { return false; }
 	}
@@ -43,53 +28,61 @@ bool Str_put_view(Str *str, StrView view) {
 }
 
 StrView Str_get_view(const Str *str) {
-	if (!str) { EXIT(); }
 	return (StrView){str->data, str->len};
 }
 
 StrView Str_get_view_cstr(char *str) {
-	if (!str) { EXIT(); }
 	return (StrView){str, strlen_save(str)};
 }
 
 void Str_clear(Str* str) { 
-	if (!str) { EXIT(); }
 	str->len = 0; 
 }
 
 Str *Str_new() {
-	Str *str = malloc(sizeof(Str));
-	str->data = NULL;
-	str->len = 0;
-	str->cap = 0;
+	Str *str = calloc(1, sizeof(Str));
+	if (!str) { return NULL; }
 	return str;
 }
 
-void Str_free(Str *str) {
-	if (!str) { EXIT(); }
-	if (str->data) { free(str->data); }
-	free(str);
+bool Str_free(Str **str) {
+	if (!str || !*str) { return false; }
+	free((*str)->data);
+	free(*str);
+	*str = NULL;
+	return true;
 }
 
 void Str_print(Str *str) {
-	if (!str) { EXIT(); }
 	if (!str->data) return;
 	for (uint32_t i = 0; i < str->len; i++) {
 		putc(str->data[i], stdout);
 	}
-	printf("\n");
+}
+void Str_printn(Str *str) {
+	if (!str->data) return;
+	for (uint32_t i = 0; i < str->len; i++) {
+		putc(str->data[i], stdout);
+	}
+	putc('\n', stdout);
 }
 
 void StrView_print(StrView *view) {
-	if (!view) { EXIT(); }
 	if (!view->data) return;
 	for (uint32_t i = 0; i < view->len; i++) {
 		putc(view->data[i], stdout);
 	}
 }
 
+void StrView_printn(StrView *view) {
+	if (!view->data) return;
+	for (uint32_t i = 0; i < view->len; i++) {
+		putc(view->data[i], stdout);
+	}
+	putc('\n', stdout);
+}
+
 bool StrView_offset(StrView* view, uint32_t offset) {
-	if (!view) { EXIT(); }
 	if (offset > view->len) { return false; }
 	view->data += offset;
 	view->len -= offset;
@@ -97,62 +90,61 @@ bool StrView_offset(StrView* view, uint32_t offset) {
 }
 
 void StrView_trim(StrView* view) {
-	if (!view) { EXIT(); }
 	if (view->len == 0) { return; }
-	while (view->len > 0 && view->data[view->len - 1] == ' ') {
-		view->len--;
-	}
-
+	while (view->len > 0 && view->data[view->len - 1] == ' ') { view->len--; }
 	size_t offset = 0;
-	while (offset < view->len && view->data[offset] == ' ') {
-		++offset;
-	}
+	while (offset < view->len && view->data[offset] == ' ') { ++offset; }
 	StrView_offset(view, offset);
 }
 
-
 /* --- Sparse Set (of data) --- */
+void *SSet_new() {
+	void *sset = calloc(1, sizeof(SSetInternal));
+	if (!sset) { EXIT(); }
+	return sset;
+}
+
+bool _SSet_free(void **sset) {
+	if (!sset || !*sset) { return false; }
+	SSetInternal *sset_internal = (SSetInternal *)(*sset);
+	free(sset_internal->data);
+	free(sset_internal->pos_to_id_map);
+	free(sset_internal->id_to_pos_map);
+	free(sset_internal->free_ids);
+	free(*(sset));
+	*(sset) = NULL;
+	return true;
+}
+
+void _SSet_clear(SSetInternal *sset) {
+	sset->len = 0;
+	sset->free_ids_count = 0;
+  memset(sset->id_to_pos_map, 0xFF, sset->cap * sizeof(uint32_t));
+}
+
 bool _SSet_realloc(SSetInternal *sset, size_t item_size) {
-	bool first_alloc = false;
-  if (sset->cap == 0) {
-    sset->cap = 256;
-		first_alloc = true;
-  } else {
-    if (sset->cap >= UINT32_MAX / (item_size * 2)) {
-      return false;
-    }
-    sset->cap *= 2;
-  }
-  sset->data = realloc(sset->data, sset->cap * item_size);
-  if (!sset->data) {
-    EXIT();
-  }
+	uint32_t old_cap = sset->cap;
+	if (!increase_capacity(&sset->cap)) { return false; }
+
+  sset->data = realloc(sset->data, (uint64_t)sset->cap * item_size);
+  if (!sset->data) { EXIT(); }
+
   sset->pos_to_id_map =
-      realloc(sset->pos_to_id_map, sset->cap * sizeof(uint32_t));
-  if (!sset->pos_to_id_map) {
-    EXIT();
-  }
+      realloc(sset->pos_to_id_map, (uint64_t)sset->cap * sizeof(uint32_t));
+  if (!sset->pos_to_id_map) { EXIT(); }
+
   sset->id_to_pos_map =
-      realloc(sset->id_to_pos_map, sset->cap * sizeof(uint32_t));
-  if (!sset->id_to_pos_map) {
-    EXIT();
-  }
-	// set all new id fields to UINT32_MAX
-	if (first_alloc) {
-  	memset(sset->id_to_pos_map, 0xFF, sset->cap * sizeof(uint32_t));
-	} else {
-		memset(sset->id_to_pos_map + (sset->cap / 2),
-					 0xFF, (sset->cap / 2) * sizeof(uint32_t));
-	}
-  sset->free_ids = realloc(sset->free_ids, sset->cap * sizeof(uint32_t));
-  if (!sset->free_ids) {
-    EXIT();
-  }
+      realloc(sset->id_to_pos_map, (uint64_t)sset->cap * sizeof(uint32_t));
+  if (!sset->id_to_pos_map) { EXIT(); }
+  memset(sset->id_to_pos_map + old_cap, 0xFF,
+				 (sset->cap - old_cap) * sizeof(uint32_t));
+
+  sset->free_ids = realloc(sset->free_ids, (uint64_t)sset->cap * sizeof(uint32_t));
+  if (!sset->free_ids) { EXIT(); }
   return true;
 }
 
 uint32_t _SSet_push_back(SSetInternal *sset, void *item, size_t item_size) {
-	if (!sset) { EXIT(); }
 	if (sset->len >= sset->cap) {
 		if (!_SSet_realloc(sset, item_size)) { return UINT32_MAX; }
 	}
@@ -173,35 +165,34 @@ uint32_t _SSet_push_back(SSetInternal *sset, void *item, size_t item_size) {
 	return id;
 }
 
-bool _SSet_emplace_back(SSetInternal *sset, uint32_t id, void *item, size_t item_size) {
-	if (!sset) { EXIT(); }
+bool _SSet_emplace_id(SSetInternal *sset, uint32_t id, void *item, size_t item_size) {
 	if (sset->len >= sset->cap) {
 		if (!_SSet_realloc(sset, item_size)) { return false; }
 	}
-
-	// overwrite allways, can check with contains() if want
-	if (id >= sset->cap) { return false; }
+	// grow cap if necessary
+	while (id >= sset->cap) { 
+		if (!_SSet_realloc(sset, item_size)) { return false; }
+	}
 	// if index in free stack, remove it
 	for (int i = sset->free_ids_count - 1; i >= 0; i--) {
 		if (id == sset->free_ids[i]) { 
 			memcpy(sset->free_ids + i,
-					sset->free_ids + i + 1,
-					sset->free_ids_count - (i + 1));
+						 sset->free_ids + i + 1,
+						 (sset->free_ids_count - i - 1) * sizeof(uint32_t));
+			sset->free_ids_count--;
 		}
 	}
-
+	// emplace item
 	uint32_t data_index = sset->len * item_size;
 	memcpy(sset->data + data_index, item, item_size);
-
+	// update the maps
 	sset->id_to_pos_map[id] = sset->len;
 	sset->pos_to_id_map[sset->len] = id;
 	sset->len++;
-
 	return true;
 }
 
 bool _SSet_remove(SSetInternal* sset, uint32_t id_to_remove, size_t item_size) {
-	if (!sset) { EXIT(); }
 	if (id_to_remove >= sset->cap ||
 			sset->id_to_pos_map[id_to_remove] == UINT32_MAX) {
 		return false;
@@ -236,71 +227,70 @@ bool _SSet_remove(SSetInternal* sset, uint32_t id_to_remove, size_t item_size) {
 }
 
 void *_SSet_get(SSetInternal *sset, uint32_t id, size_t item_size) {
-	if (!sset) { EXIT(); }
 	if (id >= sset->cap || sset->id_to_pos_map[id] == UINT32_MAX) {
 		return NULL;
 	}
 	uint32_t pos = sset->id_to_pos_map[id];
 
-	// check if item was freed
 	if (pos == UINT32_MAX) {
 		return NULL;
 	}
-	// else return pointer to item
 	return sset->data + pos * item_size;
 }
 
 void *_SSet_at(SSetInternal *sset, uint32_t pos, size_t item_size) {
-	if (!sset) { EXIT(); }
-	if (pos >= sset->len) {
-		return NULL;
-	}
+	if (pos >= sset->len) { return NULL; }
 	return sset->data + pos * item_size;
 }
 
-
 /* --- Sparse Set (no managed data) --- */
+void *SPSet_new() {
+	void *sset = calloc(1, sizeof(SPSetInternal));
+	if (!sset) { EXIT(); }
+	return sset;
+}
+
+bool _SPSet_free(void **sset) {
+	if (!sset || !*sset) { return false; }
+	SPSetInternal *sset_internal = (SPSetInternal *)(*sset);
+	free(sset_internal->data);
+	free(sset_internal->pos_to_id_map);
+	free(sset_internal->id_to_pos_map);
+	free(sset_internal->free_ids);
+	free(*(sset));
+	*(sset) = NULL;
+	return true;
+}
+
+void _SPSet_clear(SPSetInternal *sset) {
+	sset->len = 0;
+	sset->free_ids_count = 0;
+  memset(sset->id_to_pos_map, 0xFF, sset->cap * sizeof(uint32_t));
+}
+
 bool _SPSet_realloc(SPSetInternal *sset) {
-	bool first_alloc = false;
-  if (sset->cap == 0) {
-    sset->cap = 256;
-		first_alloc = true;
-  } else {
-    if (sset->cap >= UINT32_MAX / (sizeof(void *) * 2)) {
-      return false;
-    }
-    sset->cap *= 2;
-  }
-  sset->data = realloc(sset->data, sset->cap * (sizeof(void *)));
-  if (!sset->data) {
-    EXIT();
-  }
+	uint32_t old_cap = sset->cap;
+	if (!increase_capacity(&sset->cap)) { return false; }
+
+  sset->data = realloc(sset->data, (uint64_t)sset->cap * (sizeof(void *)));
+  if (!sset->data) { EXIT(); }
+
   sset->pos_to_id_map =
-      realloc(sset->pos_to_id_map, sset->cap * sizeof(uint32_t));
-  if (!sset->pos_to_id_map) {
-    EXIT();
-  }
+      realloc(sset->pos_to_id_map, (uint64_t)sset->cap * sizeof(uint32_t));
+  if (!sset->pos_to_id_map) { EXIT(); }
+
   sset->id_to_pos_map =
-      realloc(sset->id_to_pos_map, sset->cap * sizeof(uint32_t));
-  if (!sset->id_to_pos_map) {
-    EXIT();
-  }
-	// set all new id fields to UINT32_MAX
-	if (first_alloc) {
-  	memset(sset->id_to_pos_map, 0xFF, sset->cap * sizeof(uint32_t));
-	} else {
-		memset(sset->id_to_pos_map + (sset->cap / 2),
-					 0xFF, (sset->cap / 2) * sizeof(uint32_t));
-	}
-  sset->free_ids = realloc(sset->free_ids, sset->cap * sizeof(uint32_t));
-  if (!sset->free_ids) {
-    EXIT();
-  }
+      realloc(sset->id_to_pos_map, (uint64_t)sset->cap * sizeof(uint32_t));
+  if (!sset->id_to_pos_map) { EXIT(); }
+  memset(sset->id_to_pos_map + old_cap, 0xFF,
+				 (sset->cap - old_cap) * sizeof(uint32_t));
+
+  sset->free_ids = realloc(sset->free_ids, (uint64_t)sset->cap * sizeof(uint32_t));
+  if (!sset->free_ids) { EXIT(); }
   return true;
 }
 
 uint32_t _SPSet_push_back(SPSetInternal *sset, void *item) {
-	if (!sset) { EXIT(); }
 	if (sset->len >= sset->cap) {
 		if (!_SPSet_realloc(sset)) { return UINT32_MAX; }
 	}
@@ -320,34 +310,33 @@ uint32_t _SPSet_push_back(SPSetInternal *sset, void *item) {
 	return id;
 }
 
-bool _SPSet_emplace_back(SPSetInternal *sset, uint32_t id, void *item) {
-	if (!sset) { EXIT(); }
+bool _SPSet_emplace_id(SPSetInternal *sset, uint32_t id, void *item) {
 	if (sset->len >= sset->cap) {
 		if (!_SPSet_realloc(sset)) { return false; }
 	}
-
-	if (id >= sset->cap) { return false; }
-	bool id_is_free = false;
-	if (sset->id_to_pos_map[id] == UINT32_MAX) {
-		id_is_free = true;
-	} else {
-		for (int i = sset->free_ids_count - 1; i >= 0; i--) {
-			if (id == sset->free_ids[i]) { id_is_free = true; }
+	// grow cap if necessary
+	while (id >= sset->cap) { 
+		if (!_SPSet_realloc(sset)) { return false; }
+	}
+	// if index in free stack, remove it
+	for (int i = sset->free_ids_count - 1; i >= 0; i--) {
+		if (id == sset->free_ids[i]) { 
+			memcpy(sset->free_ids + i,
+						 sset->free_ids + i + 1,
+						 (sset->free_ids_count - i - 1) * sizeof(uint32_t));
+			sset->free_ids_count--;
 		}
 	}
-	if (!id_is_free) { return false; }
-
+	// emplace item
 	sset->data[sset->len] = item;
-
+	// update the maps
 	sset->id_to_pos_map[id] = sset->len;
 	sset->pos_to_id_map[sset->len] = id;
 	sset->len++;
-
 	return true;
 }
 
 bool _SPSet_remove(SPSetInternal* sset, uint32_t id_to_remove) {
-	if (!sset) { EXIT(); }
 	if (id_to_remove >= sset->cap ||
 			sset->id_to_pos_map[id_to_remove] == UINT32_MAX) {
 		return false;
@@ -378,7 +367,6 @@ bool _SPSet_remove(SPSetInternal* sset, uint32_t id_to_remove) {
 }
 
 void *_SPSet_get(SPSetInternal *sset, uint32_t id) {
-	if (!sset) { EXIT(); }
 	if (id >= sset->cap || sset->id_to_pos_map[id] == UINT32_MAX) {
 		return NULL;
 	}
@@ -393,43 +381,39 @@ void *_SPSet_get(SPSetInternal *sset, uint32_t id) {
 }
 
 void *_SPSet_at(SPSetInternal *sset, uint32_t index) {
-	if (!sset) { EXIT(); }
-	if (index >= sset->len) {
-		return NULL;
-	}
+	if (index >= sset->len) { return NULL; }
 	return sset->data[index];
 }
 
 // --- DynArr ---
-bool _DynArr_realloc(DynArrInternal *da, size_t item_size) {
-  if (da->cap == 0) {
-    da->cap = 256;
-  } else {
-    if (da->cap >= UINT32_MAX / (item_size * 2)) {
-      return false;
-    }
-    da->cap *= 2;
-  }
-  da->data = realloc(da->data, da->cap * item_size);
-  if (!da->data) {
-    EXIT();
-  }
-  return true;
-}
-
-uint32_t _DynArr_push(DynArrInternal *da, void *item, size_t item_size) {
-	if (!da) { EXIT(); }
+uint32_t _DynArr_push_back(DynArrInternal *da, void *item, size_t item_size) {
 	if (da->len >= da->cap) {
-		if (!_DynArr_realloc(da, item_size)) { return UINT32_MAX; }
+    if (!increase_capacity(&da->cap)) { return false; }
+  	da->data = realloc(da->data, (uint64_t)da->cap * item_size);
+		if (!da->data) { EXIT(); }
 	}
 	memcpy(da->data + da->len++ * item_size, item, item_size);
 	return da->len - 1;
 }
 
 void *_DynArr_at(DynArrInternal *da, uint32_t index, size_t item_size) {
-	if (!da) { EXIT(); }
 	if (index >= da->len) {
 		return NULL;
 	}
 	return da->data + (index * item_size);
+}
+
+void *DynArr_new() {
+	void *da = calloc(1, sizeof(DynArrInternal));
+	if (!da) { EXIT(); }
+	return da;
+}
+
+bool _DynArr_free(void **da) {
+	if (!da || !*da) { return false; }
+	DynArrInternal *da_internal = (DynArrInternal  *)(*da);
+	free(da_internal->data);
+	free(*(da));
+	*(da) = NULL;
+	return true;
 }
