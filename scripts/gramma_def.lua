@@ -15,8 +15,8 @@ state.builder0_id   = state.builder0_id
 state.builder1_id   = state.builder1_id
 
 function lmanager_init(lmanager)
-  state.generator0_id = _add_generator(lmanager);
-  state.generator1_id = _add_generator(lmanager);
+  state.generator0_id = _add_generator(lmanager)
+  state.generator1_id = _add_generator(lmanager)
   state.builder0_id = _add_builder(lmanager)
   state.builder1_id = _add_builder(lmanager)
 end
@@ -42,11 +42,6 @@ builder_configs = {
     generator_id = state.generator0_id,
   },
 }
-
-builder_config_len = 0
-for _ in pairs(builder_configs) do
-  builder_config_len  = builder_config_len + 1
-end
 
 -- *** generator config ***
 
@@ -81,15 +76,6 @@ generator_configs = {
     },
   },
 }
-generator_configs_len = 0
-for _ in pairs(generator_configs) do
-  generator_configs_len  = generator_configs_len + 1
-end
-
-productions_len = 0
-for _ in pairs(generator_configs) do
-  generator_configs_len  = generator_configs_len + 1
-end
 
 -- functions that can be used inside a rule
 -- e.g. 'A{x} : g(u) < 5 : bAB ! A[-{f(x)}A][+A]',

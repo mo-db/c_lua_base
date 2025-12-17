@@ -291,6 +291,10 @@ int lremove_builder(lua_State* L) {
 	return 1;
 }
 
+int lget_builder_pos(lua_State* L);
+int lget_builder_angle(lua_State* L);
+int lget_builder_nodes(lua_State* L);
+
 /* --- lstring generation --- */
 Generator *generator_new() {
 	Generator *gen = calloc(1, sizeof(Generator));
