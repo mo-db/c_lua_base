@@ -15,6 +15,7 @@
 #include <float.h>
 #include <math.h>
 #include <string.h>
+#include <assert.h>
 
 // --- essential globals ---
 #define PI 3.14159265359
@@ -30,13 +31,6 @@
 	do {\
 		fprintf(stderr,"ERROR [%s:%d] %s()\n",\
 							 __FILE__, __LINE__, __func__);\
-		exit(EXIT_FAILURE);\
-	} while (0)
-
-#define EXIT_MSG(msg)\
-	do {\
-		fprintf(stderr,"ERROR [%s:%d] %s()\n->%s\n",\
-							 __FILE__, __LINE__, __func__, msg);\
 		exit(EXIT_FAILURE);\
 	} while (0)
 

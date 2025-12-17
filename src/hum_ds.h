@@ -18,6 +18,7 @@ Str *Str_new();
 void Str_free(Str *str);
 void Str_clear(Str* str);
 
+// -> false if len == UINT32_MAX
 bool Str_putc(Str *str, char c);
 bool Str_put_cstr(Str *str, const char *cstr);
 bool Str_put_view(Str *str, StrView view);
@@ -123,10 +124,12 @@ void *_SSet_at(SSetInternal* sset, uint32_t index, size_t item_size);
 								 (id), \
 								 sizeof(*(sset)->payload)))
 
-// TODO: needs type checking
-static inline uint32_t SSet_id_at(void *sset, uint32_t index) {
-	return ((SSetInternal *)sset)->pos_to_id_map[index];
+static inline uint32_t _SSet_id_at(SSetInternal *sset, uint32_t index) {
+	return sset->pos_to_id_map[index];
 }
+#define SSet_id_at(sset, index) \
+	(_SSet_id_at(((sset) ? &(sset)->internal : NULL), \
+								 (index)))
 
 /* --- Sparse Set (no data) --- */
 // only holds pointers to objects
@@ -215,9 +218,13 @@ void *_SPSet_at(SPSetInternal* sset, uint32_t index);
 #define SPSet_at(sset, id) \
 	((typeof((sset)->payload))_SPSet_at(((sset) ? &(sset)->internal : NULL), \
 								 (id)))
-static inline uint32_t SPSet_id_at(void *sset, uint32_t index) {
-	return ((SPSetInternal *)sset)->pos_to_id_map[index];
+
+static inline uint32_t _SPSet_id_at(SPSetInternal *sset, uint32_t index) {
+	return sset->pos_to_id_map[index];
 }
+#define SPSet_id_at(sset, index) \
+	(_SPSet_id_at(((sset) ? &(sset)->internal : NULL), \
+								 (index)))
 
 /* --- dynamic array --- */
 // simple dynammic array that can grow

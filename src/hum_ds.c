@@ -2,21 +2,27 @@
 
 /* --- Dynamic String datatype --- */
 bool Str_putc(Str *str, const char ch) {
-	if (!str) { EXIT(); }
-	if (str->len + 1 >= str->cap) {
-		if (str->cap == 0) { str->cap += 256; }
-		else {
-			if (str->cap >= UINT32_MAX / 2) {
-				return false;
-			}
-			str->cap *= 2; 
-		}
-		str->data = realloc(str->data, str->cap);
-		if (!str->data) { EXIT(); }
-		str->data[str->cap - 1] = '\0';
-	}
-	str->data[str->len++] = ch;
-	return true;
+  if (!str) {
+    EXIT();
+  }
+  if (str->len + 1 >= str->cap) {
+    if (str->cap == UINT32_MAX) {
+      return 0;
+    }
+    if (str->cap == 0) {
+      str->cap += 256;
+    } else {
+      str->cap *= 2;
+    }
+    str->data = realloc(str->data, str->cap);
+    if (!str->data) {
+      EXIT();
+    }
+    str->data[str->cap - 1] = '\0';
+  }
+
+  str->data[str->len++] = ch;
+  return true;
 }
 
 bool Str_put_cstr(Str *str, const char *cstr) {

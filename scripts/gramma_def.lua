@@ -1,12 +1,24 @@
 -- *** init function ***
 -- clear lmanager, then add
-generator0_id = 0
-builder0_id = 0
-builder1_id = 0
+
+-- persistent state survives dofile()
+
+
+_G.lmanager_state = _G.lmanager_state or {}
+
+local state = _G.lmanager_state
+
+-- only define IDs once
+state.generator0_id = state.generator0_id
+state.generator1_id = state.generator1_id
+state.builder0_id   = state.builder0_id
+state.builder1_id   = state.builder1_id
+
 function lmanager_init(lmanager)
-  generator0_id = _add_generator(lmanager);
-  builder0_id = _add_builder(lmanager)
-  builder1_id = _add_builder(lmanager)
+  state.generator0_id = _add_generator(lmanager);
+  state.generator1_id = _add_generator(lmanager);
+  state.builder0_id = _add_builder(lmanager)
+  state.builder1_id = _add_builder(lmanager)
 end
 
 -- *** interpreter config ***
@@ -16,18 +28,18 @@ end
   - change the string source from the config, can load from disk
 --]]
 
+-- default applies to all, use specific id to overwrite
 builder_configs = {
   [0] = {
-    pos = {700, 2100},
-    angle = 3.14/2,
+    pos = {400, 400},
     segment_node_count = 3,
-    generator_id = generator0_id,
+    generator_id = state.generator1_id,
   },
   default = {
-    pos = {700, 2000},
-    angle = 3.14/2,
-    segment_node_count = 1,
-    generator_id = generator0_id,
+    pos = {800, 800},
+    angle = 3.14/4,
+    segment_node_count = 3,
+    generator_id = state.generator0_id,
   },
 }
 
@@ -41,9 +53,12 @@ end
 --[[
 --]]
 
+-- default applies to all, use specific id to overwrite
 generator_configs = {
-  [5] = {
+  [1] = {
     defaults = {
+      move = 20.0,
+      rotate = 0.5,
     },
     globals = {
     },
@@ -52,8 +67,8 @@ generator_configs = {
   },
   default = {
     defaults = {
-      move = 10.0,
-      rotate = 0.1,
+      move = 80.0,
+      rotate = 0.2,
     },
     globals = {
       h = 0,

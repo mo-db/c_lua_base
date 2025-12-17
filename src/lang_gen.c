@@ -1,6 +1,6 @@
 #include "lang_gen.h"
 
-// --- manager ---
+/* --- LManager --- */
 LManager *LManager_new() {
 	LManager *manager = malloc(sizeof(LManager));
 	manager->generators = SPSet_new();
@@ -20,6 +20,7 @@ void LManager_free(LManager* manager) {
 	free(manager);
 }
 
+/* --- LManager config from lua --- */
 void LManager_init_from_config(lua_State* L, LManager* manager) {
 	lua_getglobal(L, "lmanager_init");
 	if (!lua_isfunction(L, -1)) {
@@ -33,20 +34,16 @@ void LManager_init_from_config(lua_State* L, LManager* manager) {
 
 void configure_defaults(lua_State *L, Generator *generator) {
 	double value = 0;
-
 	if (lua_table_get_number(L, "move", &value)) { 
 		generator->move_default = value;
-	} else { EXIT(); }
-
+	}
 	if (lua_table_get_number(L, "rotate", &value)) {
 		generator->rotate_default = value;
-	} else { EXIT(); }
+	}
 }
 
-// name shoud be maybe set or similar
 static void configure_globals(lua_State *L, Generator *generator) {
   double value = 0;
-
   if (lua_table_get_number(L, "h", &value)) {
 		SSet_emplace_back(generator->vars, 'h', value);
 	}
@@ -62,38 +59,105 @@ static void configure_globals(lua_State *L, Generator *generator) {
 }
 
 static void configure_productions(lua_State *L, Generator *generator) {
-
-	// TODO: put prod into SS, remove should call free_prod
-	// clear productions
+	// free productions and clear the SPSet
 	for (int i = 0; i < SPSet_len(generator->productions); i++) {
 		production_free(SPSet_at(generator->productions, i));
 	}
 	SPSet_clear(generator->productions);
+	// readd productions
+	Str *production_str = Str_new();
+	for (int i = 1; lua_table_string_at(L, i, production_str); i++) {
+		Production *prod = parse_production_str(production_str);
+		// format_production(generator, prod);
+		if (SPSet_push_back(generator->productions, prod) == UINT32_MAX) { EXIT(); }
+		Str_clear(production_str);
+		// printf("--- PROD DEBUG PRINT ---\n");
+		// Str_print(prod->symbol);
+		// Str_print(prod->condition);
+		// Str_print(prod->context);
+		// Str_print(prod->replacement);
+		// printf("--- DEBUG PRINT END---\n");
+	}
+	Str_free(production_str);
+}
 
-	for (int i = 1;; i++) {
-		lua_pushnumber(L, i);
-		lua_gettable(L, -2);
-		if (lua_isstring(L, -1)) {
-			Production *prod = parse_production_str((char *)lua_tolstring(L, -1, NULL));
-			format_production(generator, prod);
+typedef enum {
+	DEFAULT,
+	SPECIFIC
+} ConfigType;
 
-			format_production(generator, prod);
+// bool lua_table_empty(lua_State *L) {
+// 		lua_pushnumber(L, 1);
+// 		lua_gettable(L, -2);
+// 		if (lua_isnil(L, -1)) {	
+// 			lua_pop(L, 1);
+// 			return true;
+// 		}
+// 		lua_pop(L, 1);
+// 		return false;
+// }
 
-			printf("### PROD DEBUG ###: %d\n", i);
-			printf("###\n");
-			Str_print(prod->symbol);
-			Str_print(prod->condition);
-			Str_print(prod->context);
-			Str_print(prod->replacement);
-			printf("sset len: %d\n", SPSet_len(generator->productions));
-			printf("###\n");
-
-
-			if (SPSet_push_back(generator->productions, prod) == UINT32_MAX) { EXIT(); }
-		} else {
-			break;
+void configure_generator(lua_State *L, Generator *generator) {
+	// get table-field defaults
+	lua_pushstring(L, "defaults");
+	lua_gettable(L, -2);
+	if (lua_istable(L, -1)) {
+		if (!lua_table_empty(L, -1)) {
+			configure_defaults(L, generator);
 		}
-		lua_pop(L, 1);
+	}
+	lua_pop(L, 1);
+
+	// get table-field globals
+	lua_pushstring(L, "globals");
+	lua_gettable(L, -2);
+	if (lua_istable(L, -1)) { 
+		if (!lua_table_empty(L, -1)) {
+			configure_globals(L, generator);
+		}
+	}
+	lua_pop(L, 1);
+
+	// get table-field productions
+	lua_pushstring(L, "productions");
+	lua_gettable(L, -2);
+	if (lua_istable(L, -1)) {
+		if (!lua_table_empty(L, -1)) {
+			configure_productions(L, generator);
+		}
+	}
+
+	lua_pop(L, 1);
+}
+
+void configure_builder(lua_State *L, Builder *builder) {
+	double value = 0;
+	// get table-field pos
+	lua_pushstring(L, "pos");
+	lua_gettable(L, -2);
+	if (lua_istable(L, -1)) { 
+		if (lua_table_number_at(L, 1, &value)) { 
+			builder->start_state.pos.x = value;
+		}
+		if (lua_table_number_at(L, 2, &value)) {
+			builder->start_state.pos.y = value;
+		}
+	}
+	lua_pop(L, 1);
+
+	// get other fields
+	if (lua_table_get_number(L, "angle", &value)) { 
+		builder->start_state.angle = value;
+	}
+	if (lua_table_get_number(L, "segment_node_count", &value)) {
+		if (value < 1 || value > 3) {
+			builder->segment_node_count = 1;
+		} else {
+			builder->segment_node_count = value;
+		}
+	}
+	if (lua_table_get_number(L, "generator_id", &value)) {
+		builder->generator_id = value;
 	}
 }
 
@@ -105,46 +169,28 @@ void reconfigure_system(lua_State *L, LManager *manager) {
 		uint32_t generator_id = SPSet_id_at(manager->generators, i);
 		generator->reset_needed = true;
 
+		// configure with default config
+		lua_pushstring(L, "default");
+		lua_gettable(L, -2);
+		if (!lua_istable(L, -1)) { EXIT(); }
+		configure_generator(L, generator);
+		lua_pop(L, 1);
+		// overwrite with specific config if present
 		lua_pushnumber(L, generator_id);
 		lua_gettable(L, -2);
-		if (!lua_istable(L, -1)) {
-			lua_pop(L, 1);
-			lua_pushstring(L, "default");
-			lua_gettable(L, -2);
-			if (!lua_istable(L, -1)) { EXIT(); }
+		if (lua_istable(L, -1)) {
+			configure_generator(L, generator);
 		}
-		// generator_config found
-
-		// get field defaults
-		lua_pushstring(L, "defaults");
-		lua_gettable(L, -2);
-		if (!lua_istable(L, -1)) { EXIT(); }
-
-		configure_defaults(L, generator);
-		lua_pop(L, 1);
-
-		// get field globals
-		lua_pushstring(L, "globals");
-		lua_gettable(L, -2);
-		if (!lua_istable(L, -1)) { EXIT(); }
-
-		configure_globals(L, generator);
-		lua_pop(L, 1);
-
-		// get field productions
-		lua_pushstring(L, "productions");
-		lua_gettable(L, -2);
-		if (!lua_istable(L, -1)) { EXIT(); }
-
-		configure_productions(L, generator);
-
-		lua_pop(L, 1);
-
-		// pop gerneator_config table
 		lua_pop(L, 1);
 	}
 
-	double value = 0;
+	// format the prductions to include the defaults
+	for (size_t i = 0; i < SPSet_len(manager->generators); i++) {
+		Generator *generator = SPSet_at(manager->generators, i);
+		for (size_t i = 0; i < SPSet_len(generator->productions); i++) {
+			format_production(generator, SPSet_at(generator->productions, i));
+		}
+	}
 
 	lua_getglobal(L, "builder_configs");
 	if (!lua_istable(L, -1)) { EXIT(); }
@@ -153,38 +199,23 @@ void reconfigure_system(lua_State *L, LManager *manager) {
 		uint32_t builder_id = SPSet_id_at(manager->builders, i);
 		builder->reset_needed = true;
 
-		lua_pushnumber(L, builder_id);
-		lua_gettable(L, -2);
-		if (!lua_istable(L, -1)) {
-			lua_pop(L, 1);
-			lua_pushstring(L, "default");
-			lua_gettable(L, -2);
-			if (!lua_istable(L, -1)) { EXIT(); }
-		}
-		// builder_config found
-		// get field pos
-		lua_pushstring(L, "pos");
+		// configure with default config
+		lua_pushstring(L, "default");
 		lua_gettable(L, -2);
 		if (!lua_istable(L, -1)) { EXIT(); }
-		if (!lua_table_number_at(L, 1, &value)) { EXIT(); }
-		builder->start_state.pos.x = value;
-		if (!lua_table_number_at(L, 2, &value)) { EXIT(); }
-		builder->start_state.pos.y = value;
+		configure_builder(L, builder);
 		lua_pop(L, 1);
-
-		// get all other fields
-		if (!lua_table_get_number(L, "angle", &value)) { EXIT(); }
-		builder->start_state.angle = value;
-		if (!lua_table_get_number(L, "segment_node_count", &value)) { EXIT(); }
-		builder->segment_node_count = value;
-		if (!lua_table_get_number(L, "generator_id", &value)) { EXIT(); }
-		builder->generator_id = value;
-
-		// pop gerneator_config table
+		// overwrite with specific config if present
+		lua_pushnumber(L, builder_id);
+		lua_gettable(L, -2);
+		if (lua_istable(L, -1)) {
+			configure_builder(L, builder);
+		}
 		lua_pop(L, 1);
 	}
 }
 
+/* --- general lsystem stuff --- */
 void redraw_all(LManager *manager) {
 	for (size_t i = 0; i < SPSet_len(manager->builders); i++) {
 		Builder *builder = SPSet_at(manager->builders, i);
@@ -222,7 +253,7 @@ double get_default(Generator* gen, SymbolCategory cat) {
 	return value;
 }
 
-// --- c functions that get called by lua ---
+/* --- lua-registered functions --- */
 int ladd_generator(lua_State* L) {
 	LManager* manager = lua_touserdata(L, 1);
 	if (!manager) { EXIT(); }
@@ -260,8 +291,7 @@ int lremove_builder(lua_State* L) {
 	return 1;
 }
 
-
-// --- generation ---
+/* --- lstring generation --- */
 Generator *generator_new() {
 	Generator *gen = calloc(1, sizeof(Generator));
 	gen->vars = SSet_new();
@@ -313,6 +343,24 @@ void clear_generators(LManager* manager) {
 	SPSet_clear(manager->generators);
 }
 
+Production *production_new() {
+	Production *production = malloc(sizeof(Production));
+	production->symbol = Str_new();
+	production->condition = Str_new();
+	production->context = Str_new();
+	production->replacement = Str_new();
+	return production;
+}
+
+void production_free(Production *production) {
+	if (!production) { EXIT(); }
+	Str_free(production->symbol);
+	Str_free(production->condition);
+	Str_free(production->context);
+	Str_free(production->replacement);
+	free(production);
+}
+
 bool arg_block_empty(StrView arg_block) {
 	if (*arg_block.data != '{') { EXIT(); }
 
@@ -333,24 +381,6 @@ bool find_delim(StrView str, char delim, uint32_t* pos) {
 	}
 	*pos = str.len;
 	return false;
-}
-
-Production *production_new() {
-	Production *production = malloc(sizeof(Production));
-	production->symbol = Str_new();
-	production->condition = Str_new();
-	production->context = Str_new();
-	production->replacement = Str_new();
-	return production;
-}
-
-void production_free(Production *production) {
-	if (!production) { EXIT(); }
-	Str_free(production->symbol);
-	Str_free(production->condition);
-	Str_free(production->context);
-	Str_free(production->replacement);
-	free(production);
 }
 
 void format_production(Generator *generator, Production *production) {
@@ -414,18 +444,18 @@ void format_production(Generator *generator, Production *production) {
 }
 
 // S{} : condition : context ! replacement
-Production *parse_production_str(char* production_str) {
+Production *parse_production_str(Str* production_str) {
 	Production *production = production_new();
 
 	// replacement
 	uint32_t seperator_position = 0;
-	StrView production_view = Str_get_view_cstr(production_str);
+	StrView production_view = Str_get_view(production_str);
 	if (!find_delim(production_view, '!', &seperator_position)) { EXIT(); }
 	if (!StrView_offset(&production_view, seperator_position + 1)) { EXIT(); }
 	Str_put_view(production->replacement, production_view);
 
 	// symbol
-	production_view = Str_get_view_cstr(production_str);
+	production_view = Str_get_view(production_str);
 	production_view.len = seperator_position;
 	if (!find_delim(production_view, ':', &seperator_position)) { 
 		Str_put_view(production->symbol, production_view);
@@ -448,115 +478,6 @@ Production *parse_production_str(char* production_str) {
 
 	return production;
 }
-
-
-// i could use str views instead of memory, just one string and views
-// Production parse_production_str(Generator* gen, const char* str) {
-// 	if (!str) { EXIT(); }
-//
-// 	// TODO: i need a new_prod() function instead of doing this here!
-//
-// 	// --- first split ---
-// 	uint32_t delim_pos = 0;
-// 	if (!find_delim(get_view(str), '!', &delim_pos)) { EXIT(); }
-//
-// 	// --- format replacement ---
-// 	StrView first_part_view = get_view(str);
-// 	first_part_view.len = delim_pos;
-// 	Str *repl = Str_new();
-// 	StrView repl_view = get_view(str + delim_pos + 1);
-//
-// 	char* prepl_end = repl_view.data + repl_view.len;
-// 	while (repl_view.data < prepl_end) {
-// 		char symbol = *repl_view.data;
-//
-// 		if (symbol == ' ') {
-// 			if (!StrView_offset(&repl_view, 1)) { EXIT(); }
-// 			continue;
-// 		}
-//
-// 		if (symbol == '[' || symbol == ']') {
-// 			if (!Str_putc(repl, symbol)) { EXIT(); }
-// 			if (!StrView_offset(&repl_view, 1)) { EXIT(); }
-// 			continue;
-// 		}
-//
-// 		if (repl_view.data + 1 < prepl_end) {
-// 			SymbolCategory symbol_category = get_symbol_category(symbol);
-// 			if (!Str_putc(repl, symbol)) { EXIT(); }
-// 			if (!StrView_offset(&repl_view, 1)) { EXIT(); }
-//
-// 			if (*repl_view.data != '{') {
-// 				double default_value = get_default(gen, symbol_category);
-// 				char new_arg_block[64];
-// 				new_arg_block[63] = '\0';
-// 				snprintf(new_arg_block, 64, "{%f}", default_value);
-// 				if (Str_put_view(repl, get_view(new_arg_block)) == 0) { EXIT(); }
-// 			} else {
-// 				StrView block = {};
-// 				if (!get_block(repl_view, '{', &block)) { EXIT(); };
-// 				if (arg_block_empty(block)) {
-// 					double default_value = get_default(gen, symbol_category);
-// 					char new_arg_block[64];
-// 					new_arg_block[63] = '\0';
-// 					snprintf(new_arg_block, 64, "{%f}", default_value);
-// 					if (Str_put_view(repl, get_view(new_arg_block)) == 0) { EXIT(); }
-// 				} else {
-// 					if (Str_put_view(repl, block) == 0) { EXIT(); }
-// 				}
-// 				if (!StrView_offset(&repl_view, block.len)) { EXIT(); }
-// 			}
-// 		}
-// 	}
-//
-//
-//
-// 	Production prod = {};
-// 	// prod.str.data = malloc(first_part_view.len + repl.len + 2);
-// 	// prod.str.cap = first_part_view.len + repl.len + 2;
-// 	// prod.str.len = 0;
-// 	prod.replacement = Str_get_view(prod.str);
-// 	prod.condition = Str_get_view(prod.str);
-// 	prod.context = Str_get_view(prod.str);
-// 	prod.symbol = Str_get_view(prod.str);
-// 	if (!Str_put_view(prod.str, first_part_view)) { EXIT(); }
-// 	if (!Str_putc(prod.str, '!')) { EXIT(); }
-// 	if (!Str_put_view(prod.str, Str_get_lsview(repl))) { EXIT(); }
-//
-// 	prod.replacement.offset = first_part_view.len + 1;
-// 	prod.replacement.len = repl->len;
-//
-// 	Str_free(repl);
-//
-// 	// --- split all other parts ---
-// 	StrView str_view = Str_get_lsview(prod.str);
-//
-// 	str_view.len = first_part_view.len;
-// 	if (!find_delim(str_view, ':', &delim_pos)) { 
-// 		prod.symbol.offset = 0;
-// 		prod.symbol.len = str_view.len;
-// 		return prod;
-// 	}
-// 	// prod.symbol.data = str_view.data;
-// 	prod.symbol.len = delim_pos;
-//
-//
-// 	if (!StrView_offset(&str_view, delim_pos + 1)) { EXIT(); }
-// 	if (!find_delim(str_view, ':', &delim_pos)) { 
-// 		prod.condition.offset = str_view;
-// 		prod.condition = str_view;
-// 		return prod;
-// 	}
-// 	prod.condition.data = str_view.data;
-// 	prod.condition.len = delim_pos;
-//
-//
-// 	if (!StrView_offset(&str_view, delim_pos + 1)) { EXIT(); }
-// 	prod.context = str_view;
-//
-//
-// 	return prod;
-// }
 
 // evaluate production into replacement cache
 // replacement has been formated to:
@@ -624,7 +545,7 @@ bool get_block(StrView str, char delim, StrView* block) {
 		case '[': end_delim = ']'; break;
 		case '{': end_delim = '}'; break;
 		case '<': end_delim = '>'; break;
-		default: EXIT_MSG("delim is no valid bracket type");
+		default: EXIT();
 	}
 	uint32_t start_delim_pos;
 	if (!find_delim(str, start_delim, &start_delim_pos)) { return false; }
@@ -718,12 +639,13 @@ bool generate_timed(Generator* gen, double frame_time, uint64_t frame_start) {
 	return true;
 }
 
-// --- generation ---
+/* --- buiding --- */
 Builder *builder_new() {
 	Builder *builder = calloc(1, sizeof(Builder));
 	builder->nodes = DynArr_new();
 	builder->construct = DynArr_new();
-	builder->generator_id = UINT32_MAX;
+	builder->generator_id = 5;
+	builder->segment_node_count = 1;
 	return builder;
 }
 
@@ -770,6 +692,9 @@ bool remove_builder(LManager* manager, uint32_t id) {
 }
 
 void clear_builders(LManager* manager) {
+	for (int i = 0; i < SPSet_len(manager->builders); i++) {
+		builder_free(SPSet_at(manager->builders, i));
+	}
 	SPSet_clear(manager->builders);
 }
 
@@ -844,12 +769,9 @@ void symbol_action(Builder* builder, char symbol, double value) {
 	}
 }
 
-
-// ---- building ----
+// symbols can be S{} or S depending on the type
 bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
-
-	// printf("Local VIEW\n");
-	// LS_print(local_view);
+	if (!builder->lstring_non_owning) { return true; }
 	StrView local_view = Str_get_view(builder->lstring_non_owning);
 	if (builder->current_index > 0) {
 		if (!StrView_offset(&local_view, builder->current_index)) { EXIT(); }
@@ -859,26 +781,25 @@ bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
 
   while (local_view.data < view_end) {
 
-    // ---- check time ----
-
 #ifdef timed
 		if (time_limit_reached(frame_start, frame_time)) {
 			builder->current_index = builder->lstring_non_owning.data - local_view.data;
 			return false;
 		}
 #endif
+
 		char symbol = *local_view.data;
-		
 		if (local_view.data + 1 < view_end && *(local_view.data + 1) == '{') {
 			StrView block = {};
 			if (!get_block(local_view, '{', &block)) { EXIT(); };
+			StrView value_view = {block.data + 1, block.len - 1};
 
 			// convert block to double
-			char value_str[64];
-			memcpy(value_str, block.data + 1, block.len - 1);
-			value_str[63] = '\n';
-			char* end;
-			double value = strtod(value_str, &end);
+			// char value_str[64];
+			// memcpy(value_str, block.data + 1, block.len - 1);
+			// value_str[63] = '\n';
+			// char* end;
+			double value = strtod(value_view.data, NULL);
 
 			symbol_action(builder, symbol, value);
 			if (!StrView_offset(&local_view, block.len + 1)) { EXIT(); }
@@ -898,8 +819,8 @@ bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
 }
 
 bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_t frame_start) {
-	// for (uint32_t i = 0; i < SSET_LEN(builder->nodes); i++) {
-	// 	Vec2* pos = SSet_at(&builder->nodes, i);
+	// for (uint32_t i = 0; i < DynArr_len(builder->nodes); i++) {
+	// 	Vec2* pos = DynArr_at(builder->nodes, i);
 	// 	draw_rect(renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFF00FFFF);
 	// }
 	
@@ -938,13 +859,10 @@ bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_
 }
 
 bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, uint64_t frame_start) {
-
-
-
 	bool out_of_time = false;
 	for (size_t i = 0; i < SPSet_len(manager->generators); i++) {
 		Generator* generator = SPSet_at(manager->generators, i);
-		uint32_t generator_id = SSet_id_at(&manager->generators, i);
+		uint32_t generator_id = SPSet_id_at(manager->generators, i);
 
 		switch (generator->state) {
 			case IDLE:
@@ -958,23 +876,21 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 					reset_generator(generator);
 				}
 
-				// uint64_t now = SDL_GetPerformanceCounter();
 				if (!generate_timed(generator, frame_time, frame_start)) {
 					out_of_time = true;
 					break;
 				}
-				// double elapsed =
-				// 	((double)(SDL_GetPerformanceCounter() - now) / SDL_GetPerformanceFrequency()) * 1000;
-				//  printf("gen-time: %f\n", elapsed);
-				// Str_print(generator->expanded_string);
+				Str_print(generator->expanded_string);
 
 				// mark all registered interpreters for reset
 				for (size_t i = 0; i < SPSet_len(manager->builders); i++) {
 					Builder *builder = SPSet_at(manager->builders, i);
-					// if (builder->generator_id == generator_id) {
+					printf("builder->generator_id: %d\n", builder->generator_id);
+					printf("generator_id: %d\n", generator_id);
+					if (builder->generator_id == generator_id) {
 						builder->lstring_non_owning = generator->expanded_string;
 						builder->reset_needed = true;
-					// }
+					}
 				}
 				generator->state = IDLE;
 				break;
@@ -982,12 +898,9 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 		}
 	}
 
-
-
 	for (size_t i = 0; i < SPSet_len(manager->builders); i++) {
 		Builder *builder = SPSet_at(manager->builders, i);
-
-
+		printf("builder nodes: %d\n", DynArr_len(builder->construct));
 
 		if (!out_of_time) {
 			switch(builder->state) {
@@ -1002,22 +915,13 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 						reset_builder(builder);
 					}
 
-  				uint64_t now = SDL_GetPerformanceCounter();
 					if (!build_timed(builder, frame_time, frame_start)) {
 						out_of_time = true;
 						break;
 					}
-
-					double elapsed =
-      			((double)(SDL_GetPerformanceCounter() - now) / SDL_GetPerformanceFrequency()) * 1000;
-					 printf("build-time: %f\n", elapsed);
-
 					
-					// renderer_clear(&renderer->pixelbuffer, 0xFF000000); // not here!!
 					redraw_all(manager);
 					builder->state = IDLE;
-
-
 
 					break;
 				default: EXIT();
@@ -1040,28 +944,16 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 						reset_builder_draw(builder);
 					}
 
-					// uint64_t now = SDL_GetPerformanceCounter();
-
 					if (!draw_timed(renderer, builder, frame_time, frame_start)) {
 						out_of_time = true;
 						break;
 					}
-
-					// double elapsed =
-					// 	((double)(SDL_GetPerformanceCounter() - now) / SDL_GetPerformanceFrequency()) * 1000;
-					//  printf("draw-time: %f\n", elapsed);
 
 					builder->draw_state = IDLE;
 					break;
 				default: EXIT();
 			}
 		}
-
-
-
-
 	}
 	return out_of_time;
 }
-
-

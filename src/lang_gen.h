@@ -62,7 +62,7 @@ typedef struct {
 Production *production_new();
 void production_free(Production *production);
 void format_production(Generator *generator, Production *production);
-Production *parse_production_str(char* production_str);
+Production *parse_production_str(Str* production_str);
 
 
 Generator *generator_new();
@@ -72,7 +72,6 @@ bool generate_timed(Generator* gen, double frame_time, uint64_t frame_start);
 
 
 bool get_block(StrView str, char delim, StrView* block);
-Str cut_args(const StrView view);
 
 // --- interpretation ---
 
@@ -96,8 +95,8 @@ DYNARR_DEFINE(DynArrSegment, Segment);
 
 typedef struct {
 	TimeState state;
-	TimeState draw_state;
 	uint32_t generator_id;
+	TimeState draw_state;
 	Str *lstring_non_owning;
 	uint32_t current_index;
 

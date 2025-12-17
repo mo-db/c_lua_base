@@ -21,6 +21,17 @@ void lua_register_function(lua_State *L, int func(lua_State *),
 	lua_setglobal(L, global_name);
 }
 
+bool lua_table_empty(lua_State *L, int idx) {
+    lua_pushnil(L);
+    if (!lua_next(L, idx - 1)) {
+        // no elements
+        return true;
+    }
+    // table has at least one key-value pair
+    lua_pop(L, 2); // pop value and key
+    return false;
+}
+
 bool lua_table_number_at(lua_State *L, const uint32_t index, double* value) {
 	/* push the key onto the stack */
 	lua_pushnumber(L, index);
@@ -37,26 +48,18 @@ bool lua_table_number_at(lua_State *L, const uint32_t index, double* value) {
 	return true;
 }
 
-size_t lua_table_string_at(lua_State *L, const uint32_t index, char* buff, 
-												 size_t buff_size) {
+bool lua_table_string_at(lua_State *L, const uint32_t index, Str *str) {
 	lua_pushnumber(L, index);
 	lua_gettable(L, -2);
 	
 	if (!lua_isstring(L, -1)) {
 		lua_pop(L, 1);
-		return 0;
+		return false;
 	}
 
-	size_t len = 0;
-	const char* lua_string = lua_tolstring(L, -1, &len);
-	if (len > buff_size) {
-		lua_pop(L, 1);
-		return 0;
-	}
-
-	memcpy(buff, lua_string, len);
+	Str_put_cstr(str, lua_tolstring(L, -1, NULL));
 	lua_pop(L, 1);
-	return len;
+	return true;
 }
 
 bool lua_table_get_number(lua_State *L, const char *key, double* value) {
@@ -73,24 +76,16 @@ bool lua_table_get_number(lua_State *L, const char *key, double* value) {
 	return true;
 }
 
-size_t lua_table_get_string(lua_State *L, const char *key, char* buff, 
-												  size_t buff_size) {
+bool lua_table_get_string(lua_State *L, const char *key, Str *str) {
 	lua_pushstring(L, key);
 	lua_gettable(L, -2);
 	
 	if (!lua_isstring(L, -1)) {
 		lua_pop(L, 1);
-		return 0;
+		return false;
 	}
 
-	size_t len = 0;
-	const char* lua_string = lua_tolstring(L, -1, &len);
-	if (len > buff_size) {
-		lua_pop(L, 1);
-		return 0;
-	}
-
-	memcpy(buff, lua_string, len);
+	Str_put_cstr(str, lua_tolstring(L, -1, NULL));
 	lua_pop(L, 1);
-	return len;
+	return true;
 }

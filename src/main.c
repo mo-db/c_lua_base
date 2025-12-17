@@ -10,13 +10,6 @@
 #define W 940
 #define H 520
 
-// bei context-sensitive languages gibt es kein verfahren
-// welches entscheiden kann ob ein wort in der sprache ist
-// -> bei context-frei gibt es den CYK algorithmus
-// -> deswegen pumpinglemma 2 zur unterscheidung
-
-
-
 int main() {
 	App app = {};
 	app_init(&app, W, H);
@@ -104,7 +97,10 @@ int main() {
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
 			reconfigure_system(app.state.L, lmanager);
-			SPSet_at(lmanager->generators, 0)->iterations++;
+			// SPSet_at(lmanager->generators, 0)->iterations++;
+			for (int i = 0; i < SPSet_len(lmanager->generators); i++) {
+				SPSet_at(lmanager->generators, i)->iterations++;
+			}
 		}
 
 		
