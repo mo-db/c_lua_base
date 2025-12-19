@@ -32,6 +32,7 @@ void Str_clear(Str* str);
 bool Str_putc(Str *str, char c);
 bool Str_put_cstr(Str *str, const char *cstr);
 bool Str_put_view(Str *str, StrView view);
+bool Str_put_str(Str *dest, const Str *src);
 
 StrView Str_get_view(const Str *str);
 StrView Str_get_view_cstr(char *cstr);

@@ -185,10 +185,27 @@ void reconfigure_system(lua_State *L, LManager *manager) {
 	}
 
 	// format the prductions to include the defaults
+	// QUEST: what whas the reason this cant be inside the prod config?
 	for (size_t i = 0; i < DS_LEN(manager->generators); i++) {
 		Generator *generator = SPSet_at(manager->generators, i);
+
+		bool syntax_error = false;
 		for (size_t i = 0; i < DS_LEN(generator->productions); i++) {
-			format_production(generator, SPSet_at(generator->productions, i));
+			if (!format_and_check_production(generator,
+																			 SPSet_at(generator->productions, i))) {
+				syntax_error = true;
+				break;
+			}
+		}
+
+		if (syntax_error) {
+			// set event
+			printf("generator disabled\n");
+			generator->disable = true;
+		} else {
+			// set event
+			printf("generator enabled\n");
+			generator->enable = true;
 		}
 	}
 
@@ -387,78 +404,86 @@ bool find_delim(StrView str, char delim, uint32_t* pos) {
 	return false;
 }
 
-void format_production(Generator *generator, Production *production) {
-	Str *replacement = production->replacement;
+// format_and_check_production
+// false will skip generation
+bool format_and_check_production(Generator *generator, Production *production) {
 	Str *tmp = Str_new();
-	for (int i = 0; i < replacement->len; i++) {
-		Str_putc(tmp, replacement->data[i]);
-	}
+	StrView replacement_view = Str_get_view(production->replacement);
+	char *view_end = replacement_view.data + replacement_view.len;
 
-	StrView production_view = Str_get_view(tmp);
-	char *view_end = production_view.data + production_view.len;
 
-	Str_clear(replacement);
+	int stack_count = 0;
 
 	// fill in defaults
-	while (production_view.data < view_end) {
-		StrView_printn(&production_view);
-		char symbol = *production_view.data;
+	while (replacement_view.data < view_end) {
+		char symbol = *replacement_view.data;
 
 		if (symbol == ' ') {
-			if (!StrView_offset(&production_view, 1)) { EXIT(); }
+			if (!StrView_offset(&replacement_view, 1)) { EXIT(); }
 			continue;
 		}
 
 		// copy all symbols that cant have a {} block
 		if (symbol == '[' || symbol == ']') {
-			if (!Str_putc(replacement, symbol)) { EXIT(); }
-			if (!StrView_offset(&production_view, 1)) { EXIT(); }
+			if (symbol == '[') {
+				stack_count++;
+			} else {
+				stack_count--;
+			}
+			if (!Str_putc(tmp, symbol)) { EXIT(); }
+			if (!StrView_offset(&replacement_view, 1)) { EXIT(); }
 			continue;
 		}
 
 		// {} block must now follow the symbol
-		if (production_view.data + 1 < view_end) {
+		if (replacement_view.data + 1 < view_end) {
 			// symbol is not last
 			SymbolCategory symbol_category = get_symbol_category(symbol);
-			if (!Str_putc(replacement, symbol)) { EXIT(); }
-			if (!StrView_offset(&production_view, 1)) { EXIT(); }
+			if (!Str_putc(tmp, symbol)) { EXIT(); }
+			if (!StrView_offset(&replacement_view, 1)) { EXIT(); }
 
-			if (*production_view.data != '{') {
+			if (*replacement_view.data != '{') {
 				double default_value = get_default(generator, symbol_category);
 				// this sucks
 				char new_arg_block[64];
 				new_arg_block[63] = '\0';
 				snprintf(new_arg_block, 64, "{%f}", default_value);
-				if (Str_put_view(replacement, Str_get_view_cstr(new_arg_block)) == 0) { EXIT(); }
+				if (Str_put_view(tmp, Str_get_view_cstr(new_arg_block)) == 0) { EXIT(); }
 			} else {
 				StrView block = {};
-				if (!get_block(production_view, '{', &block)) { EXIT(); };
+				if (!get_block(replacement_view, '{', &block)) { EXIT(); };
 				if (arg_block_empty(block)) {
 					double default_value = get_default(generator, symbol_category);
 					// sucks also
 					char new_arg_block[64];
 					new_arg_block[63] = '\0';
 					snprintf(new_arg_block, 64, "{%f}", default_value);
-					if (Str_put_view(replacement, Str_get_view_cstr(new_arg_block)) == 0) { EXIT(); }
+					if (Str_put_view(tmp, Str_get_view_cstr(new_arg_block)) == 0) { EXIT(); }
 				} else {
-					if (Str_put_view(replacement, block) == 0) { EXIT(); }
+					if (Str_put_view(tmp, block) == 0) { EXIT(); }
 				}
-				if (!StrView_offset(&production_view, block.len)) { EXIT(); }
+				if (!StrView_offset(&replacement_view, block.len)) { EXIT(); }
 			}
 		} else {
 			// symbol is last
-			if (!Str_putc(replacement, symbol)) { EXIT(); }
-			if (!StrView_offset(&production_view, 1)) { EXIT(); }
+			if (!Str_putc(tmp, symbol)) { EXIT(); }
+			if (!StrView_offset(&replacement_view, 1)) { EXIT(); }
 			SymbolCategory symbol_category = get_symbol_category(symbol);
 			double default_value = get_default(generator, symbol_category);
 			char new_arg_block[64];
 			new_arg_block[63] = '\0';
 			snprintf(new_arg_block, 64, "{%f}", default_value);
-			if (Str_put_view(replacement, Str_get_view_cstr(new_arg_block)) == 0) { EXIT(); }
+			if (Str_put_view(tmp, Str_get_view_cstr(new_arg_block)) == 0) { EXIT(); }
 		}
 	}
+	if (stack_count != 0) {
+		return false;
+	}
 
+	Str_clear(production->replacement);
+	Str_put_str(production->replacement, tmp);
 	Str_free(&tmp);
+	return true;
 }
 
 // S{} : condition : context ! replacement
@@ -796,8 +821,6 @@ bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
 		if (!StrView_offset(&local_view, builder->current_index)) { EXIT(); }
 	}
 
-	StrView_printn(&local_view);
-
 	char* view_end = local_view.data + local_view.len;
 
   while (local_view.data < view_end) {
@@ -825,10 +848,6 @@ bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
 				symbol_action(builder, symbol, 0);
 				if (!StrView_offset(&local_view, 1)) { EXIT(); }
 		} else {
-
-			puts("TEST");
-			printf("char: %c\n", *local_view.data);
-			StrView_printn(&local_view);
 			EXIT();
 		}
 	}
@@ -885,13 +904,35 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 		uint32_t generator_id = SPSet_id_at(manager->generators, i);
 
 		switch (generator->state) {
+			case OFFLINE:
+				if (!generator->enable) { 
+					break; 
+				}
+				generator->disable = false; // so disable while off no has effect
+				generator->enable = false;
+				generator->state = IDLE;
 			case IDLE:
-				if (!generator->reset_needed) {
+				// check for disable
+				if (generator->disable) {
+					generator->disable = false;
+					generator->enable = false;
+					generator->state = OFFLINE;
 					break;
 				}
+				// check for reset
+				if (!generator->reset_needed) { break; }
 				reset_generator(generator); // reset_needed == false
 				generator->state = WORKING;
 			case WORKING:
+				// check for disable
+				if (generator->disable) {
+					generator->disable = false;
+					generator->enable = false;
+					generator->state = OFFLINE;
+					reset_generator(generator);
+					break;
+				}
+
 				if (generator->reset_needed) {
 					reset_generator(generator);
 				}
@@ -921,6 +962,7 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 
 		if (!out_of_time) {
 			switch(builder->state) {
+				case OFFLINE:
 				case IDLE:
 					if (!builder->reset_needed) {
 						break;
@@ -949,6 +991,7 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 		if (!out_of_time) {
 			// need to redraw_all objects if i zoom or pan or change pos
 			switch (builder->draw_state) {
+				case OFFLINE: 
 				case IDLE: 
 					if (!builder->redraw_needed) {
 						break;

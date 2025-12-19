@@ -15,6 +15,7 @@ typedef enum  {
 
 // --- generation ---
 typedef enum {
+	OFFLINE,
 	WORKING,
 	IDLE,
 } TimeState;
@@ -48,8 +49,12 @@ typedef struct {
 
 	TimeState state;
 
+	// events
   bool reset_needed;
-  bool done_generating;
+  bool done_generating; // not needed
+	bool enable;
+	bool disable;
+
   int current_iteration;
   int iterations;
 
@@ -61,7 +66,7 @@ typedef struct {
 
 Production *production_new();
 void production_free(Production *production);
-void format_production(Generator *generator, Production *production);
+bool format_and_check_production(Generator *generator, Production *production);
 Production *parse_production_str(Str* production_str);
 
 
@@ -109,8 +114,10 @@ typedef struct {
 	BuilderState stack[4096];
 	uint32_t stack_index;
 
+	// events
   bool reset_needed;
 	bool redraw_needed;
+
 	uint32_t current_construct_index; // for drawing
 
 	bool done_redraw;

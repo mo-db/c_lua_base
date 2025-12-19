@@ -27,6 +27,13 @@ bool Str_put_view(Str *str, StrView view) {
 	return true;
 }
 
+bool Str_put_str(Str *dest, const Str *src) {
+	for (int i = 0; i < src->len; i++) {
+		if (!Str_putc(dest, src->data[i])) { return false; }
+	}
+	return true;
+}
+
 StrView Str_get_view(const Str *str) {
 	return (StrView){str->data, str->len};
 }
