@@ -67,7 +67,7 @@ generator_configs = {
   },
   default = {
     defaults = {
-      move = 20.0,
+      move = 80.0,
       rotate = 0.11,
     },
     globals = {

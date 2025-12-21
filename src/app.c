@@ -119,14 +119,38 @@ bool update_viewport(State* state, Viewport* viewport) {
 		viewport->xy_offset.x -= (4 / viewport->scale);
 		return true;
 	}
-	else if (became_true(state->input.up)) {
-		viewport->scale *= 0.75;
-		return true;
-	}
+	// else if (became_true(state->input.up)) {
+	// 	viewport->scale *= 0.75;
+	// 	return true;
+	// }
+	// else if (became_true(state->input.down)) {
+	// 	viewport->scale *= 1.25;
+	// 	return true;
+	// }
+
+	// zoom to mouse position,
 	else if (became_true(state->input.down)) {
-		viewport->scale *= 1.25;
+		double scale_inc = 0.5;
+		Vec2 mouse_viewpoint = sub_Vec2(state->input.mouse, viewport->xy_offset);
+		viewport->xy_offset = 
+			sub_Vec2(viewport->xy_offset,
+							 sub_Vec2(mul_Vec2(mouse_viewpoint, 1.0 / scale_inc),
+												mouse_viewpoint));
+		viewport->scale *= scale_inc;
 		return true;
 	}
+	// zoom in, shrink xy-fiewfield, around mouse
+	// thus move xy-offset closer to mouse
+	else if (became_true(state->input.up)) {
+		double scale_inc = 2.0;
+		viewport->xy_offset = 
+			add_Vec2(viewport->xy_offset,
+							 mul_Vec2(sub_Vec2(state->input.mouse, viewport->xy_offset),
+								 				1.0 - (1.0 / scale_inc)));
+		viewport->scale *= scale_inc;
+		return true;
+	}
+
 	return false;
 }
 
