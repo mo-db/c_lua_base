@@ -882,7 +882,7 @@ bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_
 			Vec2* pos0 = DynArr_at(builder->nodes, seg->node_ids[0]);
 			Vec2* pos1 = DynArr_at(builder->nodes, seg->node_ids[1]);
 			draw_thick_line(renderer, *pos0,*pos1,
-											20.0, 0xFF00FFFF);
+											4.0, 0xFF00FFFF);
 		}
 		else if (seg->node_count == 3) {
 			Vec2* pos0 = DynArr_at(builder->nodes, seg->node_ids[0]);
@@ -902,7 +902,6 @@ bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_
 bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, uint64_t frame_start) {
 	bool out_of_time = false;
 	for (size_t i = 0; i < DS_LEN(manager->generators); i++) {
-		printf("XOXOXOXOXOXOX\n");
 		Generator* generator = SPSet_at(manager->generators, i);
 		uint32_t generator_id = SPSet_id_at(manager->generators, i);
 
@@ -941,7 +940,6 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 				}
 
 				if (!generate_timed(generator, frame_time, frame_start)) {
-					printf("BABBABABBABAB\n");
 					out_of_time = true;
 					break;
 				}
@@ -994,7 +992,6 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 
 		// draw constructs into buffer
 		if (!out_of_time) {
-			printf("FUFUFUFUFUUF\n");
 			// need to redraw_all objects if i zoom or pan or change pos
 			switch (builder->draw_state) {
 				case OFFLINE: 

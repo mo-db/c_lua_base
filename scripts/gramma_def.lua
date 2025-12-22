@@ -36,13 +36,13 @@ end
 -- default applies to all, use specific id to overwrite
 builder_configs = {
   [0] = {
-    pos = {500, 700},
+    pos = {900, 800},
     segment_node_count = 3,
     generator_id = state.generator1_id,
   },
   default = {
     pos = {900, 800},
-    angle = 3.14/4,
+    angle = 3.141592654/2,
     segment_node_count = 1,
     generator_id = state.generator0_id,
   },
@@ -55,7 +55,7 @@ builder_configs = {
 
 -- default applies to all, use specific id to overwrite
 generator_configs = {
-  [1] = {
+  [3] = {
     defaults = {
       move = 10.0,
       rotate = 0.1,
@@ -67,18 +67,34 @@ generator_configs = {
   },
   default = {
     defaults = {
-      move = 80.0,
-      rotate = 0.11,
+      move = 30.0,
+      rotate = 0.15,
     },
     globals = {
       h = 0,
       i = 0,
     },
     productions = {
-      'S ! B',
-      'A ! AA',
-      'B ! A[-B]+A[-B]+B',
-      -- 'C ! A[+C]-A[+C]',
+      -- *** koch curve ***
+      --[[
+      'S ! A',
+      'A ! A+A--A+A',
+      --]]
+      -- *** levy C curve ***
+      --[[
+      'S ! A',
+      'A ! +A--A+',
+      --]]
+      -- *** basic coral ***
+      --[[
+      'S ! A',
+      'A ! A[+A]A[-A]A',
+      --]]
+      -- *** lush tree ***
+      --[[
+      'S ! A',
+      'A ! AA-[A-A+A+A]+[+A-A-A]',
+      --]]
     },
   },
 }

@@ -80,13 +80,13 @@ int main() {
 
 		// reconfigure system
 
-		// accum += elapsed_time;
-		// if (accum > 500.0) {
-		// 	accum = 0;
-		// 	renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
-		// 	lua_reload_file(app.state.L, "scripts/gramma_def.lua");
-		// 	reconfigure_system(app.state.L, lmanager);
-		// }
+		accum += elapsed_time;
+		if (accum > 5000.0) {
+			accum = 0;
+			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
+			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
+			reconfigure_system(app.state.L, lmanager);
+		}
 
 		if (became_true(app.state.input.shift)) {
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
