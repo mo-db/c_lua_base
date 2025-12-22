@@ -602,8 +602,12 @@ bool get_block(StrView str, char delim, StrView* block) {
 
 // returns true if it could finish
 bool expand(Generator* gen, double frame_time, uint64_t frame_start) {
+
 	Str* src_str;
 	Str* dest_str;
+
+
+
 	if (gen->expanded_string == gen->str0) {
 		src_str = gen->str0;
 		dest_str = gen->str1;
@@ -611,6 +615,9 @@ bool expand(Generator* gen, double frame_time, uint64_t frame_start) {
 		src_str = gen->str1;
 		dest_str = gen->str0;
 	}
+
+#define MAX_LSTRING_LEN 1000000
+	if (src_str->len > MAX_LSTRING_LEN) return false;
 
 	dest_str->len = 0;
 
