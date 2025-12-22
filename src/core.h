@@ -24,6 +24,7 @@
 // --- function-like helper macros ---
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
+#define timed
 
 
 // --- debug macros ---

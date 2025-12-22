@@ -827,7 +827,7 @@ bool build_timed(Builder* builder, double frame_time, uint64_t frame_start) {
 
 #ifdef timed
 		if (time_limit_reached(frame_start, frame_time)) {
-			builder->current_index = builder->lstring_non_owning.data - local_view.data;
+			builder->current_index = local_view.data - builder->lstring_non_owning->data;
 			return false;
 		}
 #endif

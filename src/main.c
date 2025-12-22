@@ -35,20 +35,21 @@ int main() {
 
 
 //	--- foo setup ---
-	// Trigon trigons[N_TRIGONS];
-	// for (int i = 0; i < N_TRIGONS; i++) {
-	// 	float ran = SDL_randf();
-	//
-	// 	trigons[i] = (Trigon){(Vec2){0, 0},
-	// 		(Vec2){(double)app.width, (double)app.height * ran},
-	// 		(Vec2){(double)app.width * ran, (double)app.height}};
-	//
-	// 	for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
-	// 		// trigons[i].v[j] = (Vec2){(-SDL_randf() + 0.5) * ran * i,
-	// 		// 	(-SDL_randf() + 0.5) * ran * i};
-	//
-	// 	}
-	// }
+	Trigon trigons[N_TRIGONS];
+	for (int i = 0; i < N_TRIGONS; i++) {
+		float ran = SDL_randf();
+
+		trigons[i] = (Trigon){
+			(Vec2){(double)app.width * SDL_randf(), (double)app.width * SDL_randf()},
+			(Vec2){(double)app.width * SDL_randf(), (double)app.height * SDL_randf()},
+			(Vec2){(double)app.width * SDL_randf(), (double)app.height *SDL_randf()}};
+
+		for (int j = 0; j < TRIGON_VERT_COUNT; j++) {
+			// trigons[i].v[j] = (Vec2){(-SDL_randf() + 0.5) * ran * i,
+			// 	(-SDL_randf() + 0.5) * ran * i};
+
+		}
+	}
 	uint64_t now = SDL_GetPerformanceCounter();
 	uint64_t last = SDL_GetPerformanceCounter();
 	uint64_t count = 0;
@@ -72,19 +73,20 @@ int main() {
 		SDL_RenderClear(app.renderer);
 		if (update_viewport(&app.state, &app.my_renderer->viewport)) {
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
+			redraw_all(lmanager);
 		}
 		// renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 
 
 		// reconfigure system
 
-		accum += elapsed_time;
-		if (accum > 500.0) {
-			accum = 0;
-			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
-			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
-			reconfigure_system(app.state.L, lmanager);
-		}
+		// accum += elapsed_time;
+		// if (accum > 500.0) {
+		// 	accum = 0;
+		// 	renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
+		// 	lua_reload_file(app.state.L, "scripts/gramma_def.lua");
+		// 	reconfigure_system(app.state.L, lmanager);
+		// }
 
 		if (became_true(app.state.input.shift)) {
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
@@ -106,9 +108,14 @@ int main() {
 			}
 		}
 
-		
 
+
+		printf("mouse: %f,%f\n", app.state.input.mouse.x, app.state.input.mouse.y);
 		bool out_of_time = update_lsystem(app.my_renderer, lmanager, elapsed_time, now);
+		// foo(&app, trigons);
+
+
+
 
 		// foo(&app, trigons);
 		// double elapsed =

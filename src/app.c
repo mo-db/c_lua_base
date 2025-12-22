@@ -111,43 +111,42 @@ void query_input(State* state) {
 
 
 bool update_viewport(State* state, Viewport* viewport) {
-	if (get_state(state->input.left)) {
-		viewport->xy_offset.x += (4 / viewport->scale);
-		return true;
-	}
-	else if (get_state(state->input.right)) {
-		viewport->xy_offset.x -= (4 / viewport->scale);
-		return true;
-	}
-	// else if (became_true(state->input.up)) {
-	// 	viewport->scale *= 0.75;
-	// 	return true;
-	// }
-	// else if (became_true(state->input.down)) {
-	// 	viewport->scale *= 1.25;
-	// 	return true;
-	// }
+	Vec2 mouse = state->input.mouse;
+	Vec2 mouse_world = screen_to_world(viewport, mouse);
 
-	// zoom to mouse position,
-	else if (became_true(state->input.down)) {
-		double scale_inc = 0.5;
-		Vec2 mouse_viewpoint = sub_Vec2(state->input.mouse, viewport->xy_offset);
+	static Vec2 xy_old = {};
+	static Vec2 mouse_old = {};
+	if (became_true(state->input.mouse_left)) {
+		set_state(&state->video.panning, true);
+		mouse_old = state->input.mouse;
+		xy_old = viewport->xy_offset;
+	}	else if (became_false(state->input.mouse_left)) {
+		set_state(&state->video.panning, false);
 		viewport->xy_offset = 
-			sub_Vec2(viewport->xy_offset,
-							 sub_Vec2(mul_Vec2(mouse_viewpoint, 1.0 / scale_inc),
-												mouse_viewpoint));
-		viewport->scale *= scale_inc;
+			sub_Vec2(xy_old, div_Vec2(sub_Vec2(state->input.mouse, mouse_old),
+																viewport->scale));
+	}
+
+	if (get_state(state->video.panning)) {
+		viewport->xy_offset = 
+			sub_Vec2(xy_old, div_Vec2(sub_Vec2(state->input.mouse, mouse_old),
+																viewport->scale));
 		return true;
 	}
-	// zoom in, shrink xy-fiewfield, around mouse
-	// thus move xy-offset closer to mouse
-	else if (became_true(state->input.up)) {
-		double scale_inc = 2.0;
-		viewport->xy_offset = 
-			add_Vec2(viewport->xy_offset,
-							 mul_Vec2(sub_Vec2(state->input.mouse, viewport->xy_offset),
-								 				1.0 - (1.0 / scale_inc)));
+
+	if (became_true(state->input.down)) {
+		double scale_inc = 0.5;
 		viewport->scale *= scale_inc;
+		viewport->xy_offset =
+				sub_Vec2(mouse_world, div_Vec2(mouse, viewport->scale));
+		return true;
+	}
+
+	if (became_true(state->input.up)) {
+		double scale_inc = 2.0;
+		viewport->scale *= scale_inc;
+		viewport->xy_offset =
+				sub_Vec2(mouse_world, div_Vec2(mouse, viewport->scale));
 		return true;
 	}
 

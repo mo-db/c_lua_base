@@ -6,7 +6,7 @@
 #include "render.h"
 #include "lang_gen.h"
 
-#define N_TRIGONS 50
+#define N_TRIGONS 3
 
 void foo(App* app, Trigon* trigons);
 // void configure_generator(App* app, Generator* gen, Interpreter* inter);

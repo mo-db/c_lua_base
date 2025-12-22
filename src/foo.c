@@ -16,7 +16,8 @@ void foo(App* app, Trigon* trigons) {
 
 	for (int i = 0; i < N_TRIGONS; i++) {
 		Trigon tr = trigons[i];
-		draw_trigon(app->my_renderer, tr.a, tr.b, tr.c, (int)(SDL_randf() * (float)0xFFFFFFFF));
+		// draw_trigon(app->my_renderer, tr.a, tr.b, tr.c, (int)(SDL_randf() * (float)0xFFFFFFFF));
+		draw_trigon(app->my_renderer, tr.a, tr.b, tr.c, 0xFFFFFFFF);
 		// draw_rect(app->my_renderer, (Vec2){300, 300}, (Vec2){700, 700}, 0xFFFFFFFF);
 		// draw_rect_test(app->my_renderer, (Vec2){300, 300}, (Vec2){700, 700}, 0xFFFFFFFF);
 		// draw_trigon(app->my_renderer, (Vec2){300, 300}, (Vec2){700, 700}, (Vec2){100, 900}, 0xFF00FFFF);
