@@ -110,7 +110,7 @@ int main() {
 
 
 
-		printf("mouse: %f,%f\n", app.state.input.mouse.x, app.state.input.mouse.y);
+		// printf("mouse: %f,%f\n", app.state.input.mouse.x, app.state.input.mouse.y);
 		bool out_of_time = update_lsystem(app.my_renderer, lmanager, elapsed_time, now);
 		// foo(&app, trigons);
 

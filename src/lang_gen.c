@@ -602,12 +602,8 @@ bool get_block(StrView str, char delim, StrView* block) {
 
 // returns true if it could finish
 bool expand(Generator* gen, double frame_time, uint64_t frame_start) {
-
 	Str* src_str;
 	Str* dest_str;
-
-
-
 	if (gen->expanded_string == gen->str0) {
 		src_str = gen->str0;
 		dest_str = gen->str1;
@@ -616,14 +612,13 @@ bool expand(Generator* gen, double frame_time, uint64_t frame_start) {
 		dest_str = gen->str0;
 	}
 
-#define MAX_LSTRING_LEN 1000000
-	if (src_str->len > MAX_LSTRING_LEN) return false;
-
-	dest_str->len = 0;
+	if (gen->current_index == 0) {
+			dest_str->len = 0;
+	}
 
 	// uint32_t src_index = gen->current_index;
 	StrView src_view = Str_get_view(src_str);
-	StrView_offset(&src_view, gen->current_index);
+	if(!StrView_offset(&src_view, gen->current_index)) { EXIT(); }
 	
 	if (gen->current_iteration == 0) {
 		Str *replacement = maybe_replace(gen, 'S',	Str_get_view_cstr("{}"));
@@ -641,7 +636,7 @@ bool expand(Generator* gen, double frame_time, uint64_t frame_start) {
 
 #ifdef timed
 		if (time_limit_reached(frame_start, frame_time)) {
-			gen->current_index = src_str->data - src_view.data;
+			gen->current_index = src_view.data - src_str->data;
 			return false;
 		}
 #endif
@@ -907,6 +902,7 @@ bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_
 bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, uint64_t frame_start) {
 	bool out_of_time = false;
 	for (size_t i = 0; i < DS_LEN(manager->generators); i++) {
+		printf("XOXOXOXOXOXOX\n");
 		Generator* generator = SPSet_at(manager->generators, i);
 		uint32_t generator_id = SPSet_id_at(manager->generators, i);
 
@@ -945,6 +941,7 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 				}
 
 				if (!generate_timed(generator, frame_time, frame_start)) {
+					printf("BABBABABBABAB\n");
 					out_of_time = true;
 					break;
 				}
@@ -994,8 +991,10 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 			}
 		}
 
+
 		// draw constructs into buffer
 		if (!out_of_time) {
+			printf("FUFUFUFUFUUF\n");
 			// need to redraw_all objects if i zoom or pan or change pos
 			switch (builder->draw_state) {
 				case OFFLINE: 
