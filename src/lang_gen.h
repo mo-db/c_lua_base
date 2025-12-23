@@ -80,6 +80,15 @@ bool get_block(StrView str, char delim, StrView* block);
 
 // --- interpretation ---
 
+// rgb as double, value range: [0,1]
+typedef struct {
+	double r, g, b;
+} FColor;
+// wrap at 255
+typedef struct {
+	uint32_t r, g, b;
+} IColor;
+
 #define SEG_MAX_NODES 3
 typedef struct {
 	Vec2 pos;
@@ -93,12 +102,17 @@ typedef struct {
 typedef struct {
 	uint32_t node_ids[SEG_MAX_NODES];
 	uint32_t node_count;
+	uint32_t color;
 } Segment;
 
 DYNARR_DEFINE(DynArrVec2, Vec2);
 DYNARR_DEFINE(DynArrSegment, Segment);
 
 typedef struct {
+
+	uint32_t palette[8];
+	uint32_t palette_counter;
+
 	TimeState state;
 	uint32_t generator_id;
 	TimeState draw_state;
@@ -125,7 +139,7 @@ typedef struct {
 } Builder;
 
 
-void builder_add_node(Builder *builder , Vec2 node);
+uint32_t builder_add_node(Builder *builder , Vec2 node);
 void reset_builder(Builder* builder);
 void reset_builder_draw(Builder *builder);
 

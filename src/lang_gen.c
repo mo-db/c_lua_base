@@ -691,6 +691,14 @@ Builder *builder_new() {
 	builder->construct = DynArr_new();
 	builder->generator_id = 5;
 	builder->segment_node_count = 1;
+	builder->palette[0] = 0xFF0077FF;
+	builder->palette[1] = 0xFF0088EE;
+	builder->palette[2] = 0xFF0099CC;
+	builder->palette[3] = 0xFF00AABB;
+	builder->palette[4] = 0xFF00BBAA;
+	builder->palette[5] = 0xFF00CC99;
+	builder->palette[6] = 0xFF00EE88;
+	builder->palette[7] = 0xFF00FF77;
 	return builder;
 }
 
@@ -701,12 +709,13 @@ void builder_free(Builder *builder) {
 	free(builder);
 }
 
-void builder_add_node(Builder *builder, Vec2 node) {
+uint32_t builder_add_node(Builder *builder, Vec2 node) {
 	uint32_t node_id = DynArr_push_back(builder->nodes, node);
 	if (node_id == UINT32_MAX) { EXIT(); }
 	builder->build_state.node_ids_queue[builder->build_state.queue_head] = node_id;
 	builder->build_state.queue_head =
 		(builder->build_state.queue_head + 1) % builder->segment_node_count;
+	return node_id;
 }
 
 void reset_builder(Builder* builder) {
@@ -759,7 +768,11 @@ void _change_width(BuilderState* state, const double width) {
 }
 
 void symbol_action(Builder* builder, char symbol, double value) {
+
+
 	if (isalpha(symbol)) {
+
+
 		// update state and push back node
 		_move(&builder->build_state, value);
 
@@ -770,6 +783,7 @@ void symbol_action(Builder* builder, char symbol, double value) {
 			// if there are enough nodes, push segment
 			if (DS_LEN(builder->nodes) >= builder->segment_node_count) {
 				Segment seg = {};
+				seg.color = builder->palette[builder->palette_counter];
 				seg.node_count = builder->segment_node_count;
 				uint32_t queue_tail = builder->build_state.queue_head;
 				for (uint32_t i = 0; i < builder->segment_node_count; i++) {
@@ -779,6 +793,9 @@ void symbol_action(Builder* builder, char symbol, double value) {
 				DynArr_push_back(builder->construct, seg);
 			}
 		}
+
+		// if color-mode == reset at move
+		builder->palette_counter = 0;	
 	}
 
 	// turn turtle counter-clockwise
@@ -798,6 +815,7 @@ void symbol_action(Builder* builder, char symbol, double value) {
 	}
 	// color palette
 	else if (symbol == '$') {
+		builder->palette_counter = (builder->palette_counter + 1) % 7;
 	}
 	else if (symbol == '%') {
 	}
@@ -864,6 +882,8 @@ bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_
 	// 	Vec2* pos = DynArr_at(builder->nodes, i);
 	// 	draw_rect(renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFF00FFFF);
 	// }
+	//
+	
 	
 	for (uint32_t i = builder->current_construct_index; i < DS_LEN(builder->construct); i++) {
 #ifdef timed
@@ -876,19 +896,19 @@ bool draw_timed(Renderer* renderer, Builder *builder, double frame_time, uint64_
 
 		if (seg->node_count == 1) {
 			Vec2* pos = DynArr_at(builder->nodes, seg->node_ids[0]);
-			draw_rect(renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), 0xFF00FFFF);
+			draw_rect(renderer, *pos, add_Vec2(*pos, (Vec2){5,5}), seg->color);
 		}
 		else if (seg->node_count == 2) {
 			Vec2* pos0 = DynArr_at(builder->nodes, seg->node_ids[0]);
 			Vec2* pos1 = DynArr_at(builder->nodes, seg->node_ids[1]);
 			draw_thick_line(renderer, *pos0,*pos1,
-											4.0, 0xFF00FFFF);
+											4.0, seg->color);
 		}
 		else if (seg->node_count == 3) {
 			Vec2* pos0 = DynArr_at(builder->nodes, seg->node_ids[0]);
 			Vec2* pos1 = DynArr_at(builder->nodes, seg->node_ids[1]);
 			Vec2* pos2 = DynArr_at(builder->nodes, seg->node_ids[2]);
-			draw_trigon(renderer, *pos0, *pos1, *pos2, 0xFF00FFFF);
+			draw_trigon(renderer, *pos0, *pos1, *pos2, seg->color);
 		}
 		else {
 			EXIT();
@@ -943,7 +963,7 @@ bool update_lsystem(Renderer *renderer, LManager *manager, double frame_time, ui
 					out_of_time = true;
 					break;
 				}
-				//Str_print(generator->expanded_string);
+				Str_print(generator->expanded_string);
 
 				// mark all registered interpreters for reset
 				for (size_t i = 0; i < DS_LEN(manager->builders); i++) {

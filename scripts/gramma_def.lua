@@ -23,7 +23,7 @@ function lmanager_init(lmanager)
   state.generator0_id = _add_generator(lmanager)
   state.generator1_id = _add_generator(lmanager)
   state.builder0_id = _add_builder(lmanager)
-  state.builder1_id = _add_builder(lmanager)
+  -- state.builder1_id = _add_builder(lmanager)
 end
 
 -- *** interpreter config ***
@@ -88,13 +88,16 @@ generator_configs = {
       -- *** basic coral ***
       --[[
       'S ! A',
-      'A ! A[+A]A[-A]A',
+      'A ! $A[+$A]$A[-$A]',
       --]]
       -- *** lush tree ***
       --[[
       'S ! A',
       'A ! AA-[A-A+A+A]+[+A-A-A]',
       --]]
+      'S ! A',
+      'A ! $A[+$A][-$A]',
+      -- 'A ! $A$A-[$A-$A+$A+$A]+[+$A-$A-$A]',
     },
   },
 }
