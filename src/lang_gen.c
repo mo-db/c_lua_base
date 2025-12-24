@@ -793,9 +793,6 @@ void symbol_action(Builder* builder, char symbol, double value) {
 				DynArr_push_back(builder->construct, seg);
 			}
 		}
-
-		// if color-mode == reset at move
-		builder->palette_counter = 0;	
 	}
 
 	// turn turtle counter-clockwise
@@ -818,6 +815,8 @@ void symbol_action(Builder* builder, char symbol, double value) {
 		builder->palette_counter = (builder->palette_counter + 1) % 7;
 	}
 	else if (symbol == '%') {
+		// if color-mode == reset at move
+		builder->palette_counter = 0;	
 	}
 	// push and pop turtle state
 	else if (symbol == '[') {
