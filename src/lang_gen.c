@@ -159,6 +159,7 @@ void configure_builder(lua_State *L, Builder *builder) {
 	if (lua_table_get_number(L, "generator_id", &value)) {
 		builder->generator_id = value;
 	}
+	builder->start_state.color = 0xFFFFFFFF;
 }
 
 void reconfigure_system(lua_State *L, LManager *manager) {
@@ -691,14 +692,22 @@ Builder *builder_new() {
 	builder->construct = DynArr_new();
 	builder->generator_id = 5;
 	builder->segment_node_count = 1;
-	builder->palette[0] = 0xFF0077FF;
-	builder->palette[1] = 0xFF0088EE;
-	builder->palette[2] = 0xFF0099CC;
-	builder->palette[3] = 0xFF00AABB;
-	builder->palette[4] = 0xFF00BBAA;
-	builder->palette[5] = 0xFF00CC99;
-	builder->palette[6] = 0xFF00EE88;
-	builder->palette[7] = 0xFF00FF77;
+	builder->palette[0] = 0xFF0000FF;
+	builder->palette[1] = 0xFF0011EE;
+	builder->palette[2] = 0xFF0022DD;
+	builder->palette[3] = 0xFF0033CC;
+	builder->palette[4] = 0xFF0044BB;
+	builder->palette[5] = 0xFF0055AA;
+	builder->palette[6] = 0xFF006699;
+	builder->palette[7] = 0xFF007788;
+	builder->palette[8] = 0xFF008877;
+	builder->palette[9] = 0xFF009966;
+	builder->palette[10] = 0xFF00AA55;
+	builder->palette[11] = 0xFF00BB44;
+	builder->palette[12] = 0xFF00CC33;
+	builder->palette[13] = 0xFF00DD22;
+	builder->palette[14] = 0xFF00EE11;
+	builder->palette[15] = 0xFF00FF00;
 	return builder;
 }
 
@@ -783,7 +792,8 @@ void symbol_action(Builder* builder, char symbol, double value) {
 			// if there are enough nodes, push segment
 			if (DS_LEN(builder->nodes) >= builder->segment_node_count) {
 				Segment seg = {};
-				seg.color = builder->palette[builder->palette_counter];
+				seg.color = builder->palette[builder->build_state.palette_counter];
+				// seg.color = builder->build_state.color;
 				seg.node_count = builder->segment_node_count;
 				uint32_t queue_tail = builder->build_state.queue_head;
 				for (uint32_t i = 0; i < builder->segment_node_count; i++) {
@@ -812,11 +822,17 @@ void symbol_action(Builder* builder, char symbol, double value) {
 	}
 	// color palette
 	else if (symbol == '$') {
-		builder->palette_counter = (builder->palette_counter + 1) % 7;
+		builder->build_state.palette_counter = (builder->build_state.palette_counter + 1) % 16;
+		builder->build_state.color = 
+			SDL_MapRGBA(SDL_GetPixelFormatDetails(SDL_PIXELFORMAT_RGBA32), NULL,
+									SDL_round(255.0 * SDL_randf()),
+									SDL_round(255.0 * SDL_randf()),
+									SDL_round(255.0 * SDL_randf()),
+									255);
 	}
 	else if (symbol == '%') {
 		// if color-mode == reset at move
-		builder->palette_counter = 0;	
+		builder->build_state.palette_counter = 0;	
 	}
 	// push and pop turtle state
 	else if (symbol == '[') {

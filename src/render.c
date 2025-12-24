@@ -53,12 +53,14 @@ void set_pixel(PixelBuffer* fb, int x, int y, uint32_t color) {
 	}
 }
 
+// point_screen is (v(point_world) - v(0,0)) * scale
 Vec2 world_to_screen(Viewport* viewport, const Vec2 point_world) {
 	Vec2 point_screen =
       mul_Vec2(sub_Vec2(point_world, viewport->xy_offset), viewport->scale);
 	return point_screen;
 }
 
+// point_world 
 Vec2 screen_to_world(Viewport *viewport, const Vec2 point_screen) {
   Vec2 point_world =
       add_Vec2(div_Vec2(point_screen, viewport->scale), viewport->xy_offset);

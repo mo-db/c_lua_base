@@ -37,7 +37,7 @@ end
 builder_configs = {
   [0] = {
     pos = {900, 800},
-    segment_node_count = 3,
+    segment_node_count = 2,
     generator_id = state.generator1_id,
   },
   default = {
@@ -93,11 +93,18 @@ generator_configs = {
       -- *** lush tree ***
       --[[
       'S ! A',
-      'A ! AA-[A-A+A+A]+[+A-A-A]',
+      'A ! AA-[A-A+A+A]+[+A-A-A]$',
       --]]
+      ---[[
       'S ! A',
-      'A ! $A[+$A][-$A]',
-      -- 'A ! $A$A-[$A-$A+$A+$A]+[+$A-$A-$A]',
+      'A ! A[+A]A[-A]A$',
+      -- ]]
+      -- *** leaf
+      --[[
+      'S ! A',
+      'A ! $B[+A][-A]BA',
+      'B ! BB',
+      --]]
     },
   },
 }

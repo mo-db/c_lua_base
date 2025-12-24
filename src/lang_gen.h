@@ -92,6 +92,8 @@ typedef struct {
 #define SEG_MAX_NODES 3
 typedef struct {
 	Vec2 pos;
+	uint32_t color;
+	uint32_t palette_counter;
 	double angle;
 	double width;
 	uint32_t node_ids_queue[SEG_MAX_NODES];
@@ -110,8 +112,8 @@ DYNARR_DEFINE(DynArrSegment, Segment);
 
 typedef struct {
 
-	uint32_t palette[8];
-	uint32_t palette_counter;
+	uint32_t palette[16];
+	uint32_t color;
 
 	TimeState state;
 	uint32_t generator_id;
