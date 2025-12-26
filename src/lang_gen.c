@@ -444,6 +444,10 @@ bool format_and_check_production(Generator *generator, Production *production) {
 			if (!StrView_offset(&replacement_view, 1)) { EXIT(); }
 
 			if (*replacement_view.data != '{') {
+				// if (!Str_putc(tmp, '{')) { EXIT(); }
+				// if (!Str_putc(tmp, '}')) { EXIT(); }
+				// // if (!StrView_offset(&replacement_view, 2)) { EXIT(); }
+
 				double default_value = get_default(generator, symbol_category);
 				// this sucks
 				char new_arg_block[64];
@@ -469,6 +473,11 @@ bool format_and_check_production(Generator *generator, Production *production) {
 			// symbol is last
 			if (!Str_putc(tmp, symbol)) { EXIT(); }
 			if (!StrView_offset(&replacement_view, 1)) { EXIT(); }
+			// if (!Str_putc(tmp, '{')) { EXIT(); }
+			// if (!Str_putc(tmp, '}')) { EXIT(); }
+			// // if (!StrView_offset(&replacement_view, 2)) { EXIT(); }
+
+
 			SymbolCategory symbol_category = get_symbol_category(symbol);
 			double default_value = get_default(generator, symbol_category);
 			char new_arg_block[64];
@@ -603,6 +612,8 @@ bool get_block(StrView str, char delim, StrView* block) {
 
 // returns true if it could finish
 bool expand(Generator* gen, double frame_time, uint64_t frame_start) {
+	char new_arg_block[64];
+
 	Str* src_str;
 	Str* dest_str;
 	if (gen->expanded_string == gen->str0) {
@@ -652,20 +663,28 @@ bool expand(Generator* gen, double frame_time, uint64_t frame_start) {
 		} else if (symbol == ' ') {
 			if (!StrView_offset(&src_view, 1)) { EXIT(); }
 		} else {
-			StrView arg_block = {};
+			StrView source_block = {};
+			if (!get_block(src_view, '{', &source_block)) { EXIT(); }
 
-			if (!get_block(src_view, '{', &arg_block)) { EXIT(); }
+			StrView eval_block = source_block;
 
-			Str *replacement = maybe_replace(gen, symbol,	arg_block);
+			if (arg_block_empty(source_block)) {
+					SymbolCategory symbol_category = get_symbol_category(symbol);
+					double default_value = get_default(gen, symbol_category);
+					snprintf(new_arg_block, 64, "{%f}", default_value);
+					eval_block = Str_get_view_cstr(new_arg_block);
+			}
+
+			Str *replacement = maybe_replace(gen, symbol,	eval_block);
 			if (replacement) { 
 				if (!eval_and_append_replacement(gen, dest_str, replacement)) { 
 					printf("replacement eval failed!\n");
 				}
 			} else {
 				if (!Str_putc(dest_str, symbol)) { EXIT(); }
-				if (!Str_put_view(dest_str, arg_block)) { EXIT(); }
+				if (!Str_put_view(dest_str, eval_block)) { EXIT(); }
 			}
-			if (!StrView_offset(&src_view, arg_block.len + 1)) { EXIT(); }
+			if (!StrView_offset(&src_view, source_block.len + 1)) { EXIT(); }
 		}
 	}
 

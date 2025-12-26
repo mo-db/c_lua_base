@@ -37,7 +37,7 @@ end
 builder_configs = {
   [0] = {
     pos = {900, 800},
-    segment_node_count = 2,
+    segment_node_count = 3,
     generator_id = state.generator1_id,
   },
   default = {
@@ -52,6 +52,10 @@ builder_configs = {
 
 --[[
 --]]
+
+-- function animate(tick_var, defaults, globals)
+--  defaults.move = sin(tick_var) * 10
+-- end
 
 -- default applies to all, use specific id to overwrite
 generator_configs = {
@@ -68,7 +72,7 @@ generator_configs = {
   default = {
     defaults = {
       move = 30.0,
-      rotate = 0.15,
+      rotate = 0.1,
     },
     globals = {
       h = 0,
@@ -91,11 +95,11 @@ generator_configs = {
       'A ! $A[+$A]$A[-$A]',
       --]]
       -- *** lush tree ***
-      --[[
-      'S ! A',
-      'A ! AA-[A-A+A+A]+[+A-A-A]$',
-      --]]
       ---[[
+      'S ! A-A-A-A-A-A-A-A-A-A-A',
+      'A ! A-[A--A+A+++A]+[+A-A-A]$',
+      --]]
+      --[[
       'S ! A',
       'A ! A[+A]A[-A]A$',
       -- ]]

@@ -81,7 +81,7 @@ int main() {
 		// reconfigure system
 
 		accum += elapsed_time;
-		if (accum > 5000.0) {
+		if (accum > 500.0) {
 			accum = 0;
 			renderer_clear(&app.my_renderer->pixelbuffer, 0xFF000000);
 			lua_reload_file(app.state.L, "scripts/gramma_def.lua");
@@ -114,6 +114,21 @@ int main() {
 		bool out_of_time = update_lsystem(app.my_renderer, lmanager, elapsed_time, now);
 		// foo(&app, trigons);
 
+		// does not work since i bake the defaults into the string...
+		// need to change this, but then i need to eval the production also
+		static double tick_var = 0;
+		// if all is drawn, animate parameters
+		if (!out_of_time) {
+			Generator *gen = SPSet_at(lmanager->generators, 0);
+			tick_var += 0.005;
+			gen->rotate_default = sin(tick_var);
+			// printf("tick: %f, rotate: %f\n", tick_var, gen->rotate_default);
+			// for (int i = 0; i < DS_LEN(gen->productions); i++) {
+			// 	format_and_check_production(gen, SPSet_at(gen->productions, i));
+			// }
+			gen->reset_needed = true;
+			// redraw_all(lmanager);
+		}
 
 
 
